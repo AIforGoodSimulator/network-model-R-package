@@ -1,5 +1,8 @@
 # network-model-R-package
 
+![](https://www.travis-ci.org/AIforGoodSimulator/network-model-R-package.svg?branch=master&status=started)
+
+
 This package has been made to make network epidemic models of COVID19 spread in refugee camps.
 
 To install run:
