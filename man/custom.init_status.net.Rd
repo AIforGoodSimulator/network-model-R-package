@@ -2,10 +2,17 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{custom.init_status.net}
 \alias{custom.init_status.net}
-\title{Another one very similar to source code}
+\title{Modification of the EpiModel::init_status.net function}
 \usage{
 custom.init_status.net(dat)
 }
 \description{
-Another one very similar to source code
+The performed modifications are clearly highlighted.
 }
+\details{
+This function has been modified with the purpose of modifying how the times spent in each
+state
+
+INTERNAL PURPOSE MOSTLY
+}
+\keyword{internal}

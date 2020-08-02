@@ -2,12 +2,17 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{custom.get_prev.net}
 \alias{custom.get_prev.net}
-\title{More source code: I've added this bit to be able to store the different number by vertex attribute
-(as per epi.by)}
+\title{Modification of the EpiModel::get_prev.net function}
 \usage{
 custom.get_prev.net(dat, at)
 }
 \description{
-More source code: I've added this bit to be able to store the different number by vertex attribute
-(as per epi.by)
+The performed modifications are clearly highlighted.
 }
+\details{
+This function has been modified with to be able to store the different number
+by vertex attribute (as per epi.by)
+
+INTERNAL PURPOSE MOSTLY
+}
+\keyword{internal}

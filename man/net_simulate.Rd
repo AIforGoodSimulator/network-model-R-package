@@ -8,11 +8,11 @@ net_simulate(
   n = 100,
   nsims = 3,
   nsteps = 90,
-  prop.iso = 0.43,
+  prop.isobox = 0.43,
   iso.capacity = 10,
   tent.capacity = 4,
   verbose = F,
-  cores = parallel::detectCores() - 1,
+  cores = 1,
   d.rate = 0,
   external.contacts = 4,
   act.rate.se = 10,
@@ -27,6 +27,7 @@ net_simulate(
   qh.rate = 1/100,
   hr.rate = 1/15,
   qr.rate = 1/20,
+  ir.rate = 1/20,
   hf.rate = 1/50,
   hf.rate.overcap = 1/25,
   hosp.cap = 5,
@@ -41,7 +42,9 @@ net_simulate(
   s.num = n - 1,
   f.num = 0,
   h.num = 0,
-  q.num = 0
+  q.num = 0,
+  agedistribution = CampNetworkSimulator::agedistribution,
+  ratesbyage = CampNetworkSimulator::ratesbyage
 )
 }
 \arguments{
@@ -52,7 +55,7 @@ net_simulate(
 \item{nsteps}{number of timesteps (days, hours, weeks, arbitrary choice), the rates need to be defined in units
 relative to this metric (e.g number of cases/day or /hour or /week)}
 
-\item{prop.iso}{Proportion of individuals in iso boxes, in this first implementation only two kinds of housing units
+\item{prop.isobox}{Proportion of individuals in iso boxes, in this first implementation only two kinds of housing units
 are considered (isoboxes and tent) -- can (and should) be changed in the future}
 
 \item{iso.capacity}{Capacity of iso boxes}
@@ -63,21 +66,26 @@ are considered (isoboxes and tent) -- can (and should) be changed in the future}
 
 \item{cores}{number of cores to be used (default: number of available cores - 1)}
 
+\item{d.rate}{departure rate (includes external deaths and actual departures) -- if set to 0 no invidual is consider to leave
+or die from causes different than the epidemic agent}
+
 \item{external.contacts}{Average number of external contacts that individuals make every day (external meaning from outside
 their tent)}
 
-\item{act.rate.se}{Act rate (contact rate) between susceptible and exposed individuals -- default: 10 interactions/timestep
-(units of this may be defined relative to the population size -- check the maths)}
+\item{act.rate.se}{Act rate (contact rate) between susceptible and exposed individuals
+-- default: 10 interactions of S-to-E/timestep/person}
 
 \item{inf.prob.se}{infection probability of susceptible individuals upon contact with exposed individuals, these value
 is often considered to be lower than that upon contact with infected individuals (though literature needs to be
 checked for this) -- default: 0.02 (Out of every 100 contacts between S and E we expect 2 infections)}
 
-\item{act.rate.si}{Act rate (contact rate) between susceptible and infected individuals -- default: 10 interactions/timestep}
+\item{act.rate.si}{Act rate (contact rate) between susceptible and infected individuals
+-- default: 10 interactions/timestep /person}
 
 \item{inf.prob.si}{infection probability of susceptible individuals upon contact with susceptible individuals -- default: 0.05}
 
-\item{act.rate.sq}{Act rate (contact rate) between susceptible and quarantined individuals -- default: 2.5 interactions/timestep}
+\item{act.rate.sq}{Act rate (contact rate) between susceptible and quarantined individuals
+-- default: 2.5 interactions/timestep/person}
 
 \item{inf.prob.sq}{infection probability of susceptible individuals upon contact with quarantined individuals -- default: 0.05}
 
@@ -97,6 +105,9 @@ when requiring hospitalisation)}
 
 \item{qr.rate}{Rate between quarantined and recovered states (~chances of recovering when
 in quarantined state)}
+
+\item{ir.rate}{Rate between infected and recovered states (~chances of recovering when
+in infected state)}
 
 \item{hf.rate}{Rate between hospitalised and fatality state (~chances of dying from the infectious agent
 given requiring hospitalisation)}
@@ -130,8 +141,12 @@ immigration)}
 
 \item{q.num}{Initial number of quarantined individuals (defaults to 0)}
 
-\item{d.rat}{departure rate (includes external deaths and actual departures) -- if set to 0 no invidual is consider to leave
-or die from causes different than the epidemic agent}
+\item{agedistribution}{vector containing the age distribution of
+individuals in the camp. By default this will be loaded internally,
+see \code{CampNetworkSimulator::agedistribution}}
+
+\item{ratesbyage}{dataframe containing the hospitalisation rate and
+fatality rate by age, by default \code{CampNetworkSimulator::ratesbyage} is used}
 }
 \description{
 This function simulates a SEIQHRF epidemic on top of a
@@ -146,6 +161,5 @@ F - Fatality (due to infection)
 }
 \examples{
 
-net_simulate()
-  
+net_simulate(n= 100, nsims = 1, nsteps = 10)
 }

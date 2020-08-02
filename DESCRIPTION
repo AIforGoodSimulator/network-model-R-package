@@ -1,18 +1,32 @@
 Package: CampNetworkSimulator
-Title: What the Package Does (One Line, Title Case)
-Version: 0.0.0.9000
+Title: CNS(CampNetworkSimulator)
+Version: 0.0.0
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Luis",
+           family = "Chaves",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to
-    pick a license
+           email = "lc5415@ic.ac.uk")
+Description: Wrapper around EpiModel with addition of custom modules to simulate COVID19 in refugee camps.
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 Depends: 
     R (>= 2.10)
+Imports: 
+    networkDynamic,
+    pheatmap,
+    plotly,
+    animation,
+    dplyr,
+    EpiModel,
+    ggplot2,
+    intergraph,
+    igraph,
+    ergm,
+    magrittr,
+    tidyr,
+    network,
+    foreach,
+    doParallel

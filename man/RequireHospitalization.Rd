@@ -2,12 +2,16 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{RequireHospitalization}
 \alias{RequireHospitalization}
-\title{4th module:
-I/Q to Require hospitalization}
+\title{Transition between the infected or quarantined state to requiring hospitalisation (multi-to-one transition)}
 \usage{
 RequireHospitalization(dat, at)
 }
+\arguments{
+\item{dat}{native Epimodel object}
+
+\item{at}{simulation timestep}
+}
 \description{
-4th module:
-I/Q to Require hospitalization
+This can be seen as analog to some sort of complication rate.
+Whether the transition occurs is governed by a Bernouilli trial with probability equal to ih.rate or qh.rate
 }

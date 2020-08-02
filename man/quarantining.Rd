@@ -2,12 +2,18 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{quarantining}
 \alias{quarantining}
-\title{3rd module
-Infection to quarantined}
+\title{Transition bettween infected to quarantined state (one-to-one transition)}
 \usage{
 quarantining(dat, at)
 }
+\arguments{
+\item{dat}{native Epimodel object}
+
+\item{at}{simulation timestep}
+}
 \description{
-3rd module
-Infection to quarantined
+Whether the transition occurs is governed by a Bernouilli trial with probability equal to ei.rate
+}
+\details{
+This transition is useful to model population compliance with Public Health campaigns and their consequences.
 }

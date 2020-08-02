@@ -11,6 +11,11 @@
 
 #' Hospitalisation and Fatality rate for each age bin
 #' 
-#' For each 10-year age bin a hospitalisation/fatality rate is known 
-#' (units: number of individuals/100/day)
+#' @format For each 10-year age bin a hospitalisation/fatality 
+#' rate is known (units: number of individuals/100/day)
+#' \describe{
+#'   \item{AgeGroup}{bins of age with open lower end and closed upper end}
+#'   \item{hosp.rate}{Hospitalisation rate by age group (units: ?number of fatalities per case/1000)}
+#'   \item{fat.rate}{Fatality rate by age group (units: ?number of fatalities per case/1000)}
+#' }
 "ratesbyage"

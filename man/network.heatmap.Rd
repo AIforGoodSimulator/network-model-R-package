@@ -4,7 +4,12 @@
 \alias{network.heatmap}
 \title{Get network heatmap at a given time step}
 \usage{
-network.heatmap(network_build_object, at = 1)
+network.heatmap(net_build_object, at = 1)
+}
+\arguments{
+\item{net_build_object}{objected returned by \code{net_simulate}}
+
+\item{at}{timestep}
 }
 \description{
 Get network heatmap at a given time step

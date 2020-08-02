@@ -2,12 +2,17 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{recover}
 \alias{recover}
-\title{5th module
-Any state to recovered}
+\title{Transition from quarantined, infected, requiring hospitalisation to recovered (multi-to-one transition)}
 \usage{
 recover(dat, at)
 }
+\arguments{
+\item{dat}{native Epimodel object}
+
+\item{at}{simulation timestep}
+}
 \description{
-5th module
-Any state to recovered
+Whether the transition occurs is governed by a Bernouilli trial with probability equal to qr.rate or ir.rate or
+hr.rate. Again this happens sequentially which results in same bias explained in the \strong{exposure} model
+(see \code{help(exposure)})
 }

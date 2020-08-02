@@ -2,21 +2,31 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{custom_discord_edgelist}
 \alias{custom_discord_edgelist}
-\title{S, Susceptible
+\title{Network Modules
+Based majorly in https://timchurches.github.io/blog/posts/2020-03-10-modelling-the-effects-of-public-health-interventions-on-covid-19-transmission-part-1/
+S, Susceptible
 E, Exposed,
 I, Infected
 Q, Quarantined
-H, Need hospitalisation
+H, Need hospitalization
 R, Recovered
 F, Fatality}
 \usage{
 custom_discord_edgelist(dat, at, from = "i")
 }
+\arguments{
+\item{dat}{native simulation object from EpiModel}
+
+\item{at}{timestep (also native to EpimModel)}
+
+\item{from}{that susceptible individuals will be matched to (options: i, q, e)}
+}
 \description{
-Network Modules
-Based majorly in https://timchurches.github.io/blog/posts/2020-03-10-modelling-the-effects-of-public-health-interventions-on-covid-19-transmission-part-1/
-work with ICM models
+In this work we are going to redefine practically all base modules from EpiModel
+Find edges that are in touch and are in different status
 }
 \details{
-In this work we are going to redefine practically all base modules from EpiModel
+The EpiModel discordedgelist function finds susceptible individuals that are in touch with exposed individuals.
+In our case, because susceptible individuals can be in touch with exposed, quarantined or infected individuals
+we have extended the function to be able to match susceptible individuals to individuals in either of those states.
 }

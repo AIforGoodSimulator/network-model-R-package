@@ -5,13 +5,18 @@
 \alias{ratesbyage}
 \title{Hospitalisation and Fatality rate for each age bin}
 \format{
-An object of class \code{data.frame} with 9 rows and 3 columns.
+For each 10-year age bin a hospitalisation/fatality
+rate is known (units: number of individuals/100/day)
+\describe{
+\item{AgeGroup}{bins of age with open lower end and closed upper end}
+\item{hosp.rate}{Hospitalisation rate by age group (units: ?number of fatalities per case/1000)}
+\item{fat.rate}{Fatality rate by age group (units: ?number of fatalities per case/1000)}
+}
 }
 \usage{
 ratesbyage
 }
 \description{
-For each 10-year age bin a hospitalisation/fatality rate is known
-(units: number of individuals/100/day)
+Hospitalisation and Fatality rate for each age bin
 }
 \keyword{datasets}

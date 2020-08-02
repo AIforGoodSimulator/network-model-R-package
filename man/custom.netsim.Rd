@@ -2,10 +2,14 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{custom.netsim}
 \alias{custom.netsim}
-\title{For most this is netsim source code, I will make it clear where I have changed the code}
+\title{Modification of the EpiModel::netsim function}
 \usage{
 custom.netsim(x, param, init, control)
 }
 \description{
-For most this is netsim source code, I will make it clear where I have changed the code
+The performed modifications are clearly highlighted.
 }
+\details{
+INTERNAL PURPOSE MOSTLY
+}
+\keyword{internal}

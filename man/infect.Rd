@@ -2,14 +2,15 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{infect}
 \alias{infect}
-\title{2nd module:
-Infect: transition from exposed to infected, based on progress function from
-EpiModel tutorial}
+\title{Transition between exposed to infected state (one-to-one transition)}
 \usage{
 infect(dat, at)
 }
+\arguments{
+\item{dat}{native Epimodel object}
+
+\item{at}{simulation timestep}
+}
 \description{
-2nd module:
-Infect: transition from exposed to infected, based on progress function from
-EpiModel tutorial
+Whether the transition occurs is governed by a Bernouilli trial with probability equal to ei.rate
 }

@@ -2,10 +2,17 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{custom.initialize.net}
 \alias{custom.initialize.net}
-\title{Custom initialize net}
+\title{Modification of the EpiModel::initialize.net function}
 \usage{
 custom.initialize.net(x, param, init, control, s)
 }
 \description{
-Custom initialize net
+The performed modifications are clearly highlighted.
 }
+\details{
+This function has been modified with the purpose of modifying how the net object is saved
+so that all of our custom states and their statistics can be saved.
+
+INTERNAL PURPOSE MOSTLY
+}
+\keyword{internal}

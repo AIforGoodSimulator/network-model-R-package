@@ -1,35 +1,29 @@
-#'S, Susceptible
-#'E, Exposed,
-#'I, Infected
-#'Q, Quarantined
-#'H, Need hospitalization
-#'R, Recovered
-#'F, Fatality
+#' Network Modules
+#' Based majorly in https://timchurches.github.io/blog/posts/2020-03-10-modelling-the-effects-of-public-health-interventions-on-covid-19-transmission-part-1/
+#' S, Susceptible
+#' E, Exposed,
+#' I, Infected
+#' Q, Quarantined
+#' H, Need hospitalization
+#' R, Recovered
+#' F, Fatality
 #'
-#'Network Modules
-#'Based majorly in https://timchurches.github.io/blog/posts/2020-03-10-modelling-the-effects-of-public-health-interventions-on-covid-19-transmission-part-1/
-#' work with ICM models
-#' 
-#' In this work we are going to redefine practically all base modules from EpiModel
-#' 
+#' In this work we are going to redefine practically all base modules from EpiModel 
 
-# we will take inspiration from these 7 scripts and make them work with nets
-# source_files <- c("_icm.mod.init.seiqhrf.R",
-#                   "_icm.mod.status.seiqhrf.R",
-#                   "_icm.mod.vital.seiqhrf.R",
-#                   "_icm.control.seiqhrf.R",
-#                   "_icm.utils.seiqhrf.R",
-#                   "_icm.saveout.seiqhrf.R",
-#                   "_icm.icm.seiqhrf.R")
-
-# I have a theory that I do not need to change all these modules! Hope it's true. 
-# We are actually not gonna try to copy this guy's code because otherwwise I'll need to understand 
-#3 how he codes studd and code from our understanding
-
+#' Find edges that are in touch and are in different status
+#'
+#' The EpiModel discordedgelist function finds susceptible individuals that are in touch with exposed individuals.
+#' In our case, because susceptible individuals can be in touch with exposed, quarantined or infected individuals
+#' we have extended the function to be able to match susceptible individuals to individuals in either of those states.
+#'
+#' @param dat native simulation object from EpiModel
+#' @param at timestep (also native to EpimModel)
+#' @param from that susceptible individuals will be matched to (options: i, q, e)
+#' @export
 custom_discord_edgelist <- function(dat, at, from = "i") {
   
   status <- dat$attr$status
-  el <- get.dyads.active(dat$nw, at = at)
+  el <- networkDynamic::get.dyads.active(dat$nw, at = at)
   
   del <- NULL
   if (nrow(el) > 0) {
@@ -50,26 +44,36 @@ custom_discord_edgelist <- function(dat, at, from = "i") {
   return(del)
 }
 
-#' 1st Module to change: 
-#' Susceptible people get exposed instead of infected, 
-#' this script replaces infection.net
+#' Transition from susceptible to exposed upon contact with transmitting individuals
+#'
+#' Transmitting individuals are exposed, infected and quarantined. Whether individuals that come upon contact
+#' with transmitting individuals is drawn from a Bernoulli distribution with P(transmitted) = __finalProb__. To
+#' see how finalProb is calculate please see the documentation for the __exposure__ function
+#' This model assumes an exposure period before an infection period for any invidividual exposed to the
+#' virus. 
 #' 
+#' This script replaces infection.net
 #' check ?infection.net for specification of what the base module does
-#' I believe in current state this supports act.rate being vectors
 #' 
-
-
-# Define custom function for exposure from different state ----------------
-FromXToExposed = function(dat, at, finalProb, from.state = "i"){
+#' @details This function is called in the __exposure__ function
+#' 
+#' @param dat Native EpiModel object
+#' @param at simulation timestep
+#' @param finalProb Probability of transition between the susceptible and the infected state upon contact with individuals
+#' from the state __contact_with__, can be a vector of lenght equal to the number of simulation timesteps.
+#' @param contact_with State of the individuals that the susceptible come into contact with
+#' @export
+FromXToExposed = function(dat, at, finalProb, contact_with = "i"){
   # utility function for exposure module
   
+  # get active individuals  
   active <- dat$attr$active
   # get their status (s, i, r...)
   status <- dat$attr$status
   
   # Get infected nodes and count them ---------------------------------------
   # get the ids of the infected
-  idsFrom <- which(active == 1 & status == from.state)
+  idsFrom <- which(active == 1 & status == contact_with)
   # get the number of active nodes
   nActive <- sum(active == 1)
   
@@ -77,17 +81,17 @@ FromXToExposed = function(dat, at, finalProb, from.state = "i"){
   nElig <- length(idsFrom)
   nExpFromX <- 0
   
-  # Get discordand edgelist and draw those that get exposed FROM INFECTED --------------
+  # Get discordant_edgelist and draw those that get exposed FROM INFECTED --------------
   if (nElig > 0 && nElig < nActive) {
-    #discordant edgelist – a matrix of ID numbers of active dyads 
+    #discordant_edgelist – a matrix of ID numbers of active dyads 
     # in the network in which one member of the dyad is susceptible
     # and the other is infected -- 
-    del <- custom_discord_edgelist(dat, at, from = from.state)
+    del <- custom_discord_edgelist(dat, at, from = contact_with)
     
     if (!(is.null(del))) { # if del exists
       # draw samples from binomial (Bernouilli) distribution with 
       # final prob
-      transmit <- rbinom(nrow(del), 1, finalProb)
+      transmit <- stats::rbinom(nrow(del), 1, finalProb)
       # select those that have transmitted according to the trial
       del <- del[which(transmit == 1), ]
       # Get new infected
@@ -106,13 +110,29 @@ FromXToExposed = function(dat, at, finalProb, from.state = "i"){
   return(list(dat, nExpFromX))
 }
 
+
+#' Transition to exposed (from susceptible) module
+#' 
+#' Models transition to the exposed state. Makes use of the FromXtoExposed function.
+#' 
+#' @details The final probability is calculated based on the contact rate (act.rate) and infection probability (inf.prob)
+#' using the following equation: 
+#' \deqn{finalProb = 1 - (1 - inf.prob)^act.rate}
+#' Read more at the pages 65-66 of [this book](http://courses.washington.edu/b578a/readings/bookchap4.pdf)
+#' This corresponding to a Binomial trial with a p of success (transmission equal) to __inf.prob__ 
+#' and __act.rate__ trials
+#' 
+#' @details Currently, the transition are processed sequentially. The transition in question are one-to-multiple state transitions]
+#' which should be modelled concurrently using transition matrices. The current implementation introduces bias as
+#' the probability of the transmission not being succesful is greater than it would be if this was to be processed
+#' concurrently. Read more [here](https://github.com/statnet/EpiModel/issues/417) for further discussion or 
+#' get in touch if you implement this
+#' 
+#' @param dat native Epimodel object
+#' @param at simulation timestep
+#' @export
 exposure <- function(dat, at) {
-  #' This function describes how people get EXPOSED
-  #' FROM THOSE INFECTED, QUARANTINED AND EXPOSED
-  
-  # Get act rate and inf prob specific parameters ---------------------------
-  
-  # set transmission probability to infection prob from relevant sub-state
+
   transProb.se <- ifelse(!is.null(dat$param$inf.prob.se), 
                          dat$param$inf.prob.se, 
                          ifelse(!is.null(dat$param$inf.prob.si),
@@ -146,18 +166,18 @@ exposure <- function(dat, at) {
                        dat$param$act.rate.si, 
                        dat$param$act.rate)
   
-  # calculate prob of infection from standard formula
+  # Binomial trials
   finalProb.se <- 1 - (1 - transProb.se)^actRate.se
   finalProb.sq <- 1 - (1 - transProb.sq)^actRate.sq
   finalProb.si <- 1 - (1 - transProb.si)^actRate.si
   
-  result = FromXToExposed(dat, at, finalProb = finalProb.se, from.state = "e")
+  result = FromXToExposed(dat, at, finalProb = finalProb.se, contact_with = "e")
   dat = result[[1]]
   nExpFromExp = result[[2]]
-  result = FromXToExposed(dat, at, finalProb = finalProb.sq, from.state ="q")
+  result = FromXToExposed(dat, at, finalProb = finalProb.sq, contact_with ="q")
   dat = result[[1]]
   nExpFromQuar = result[[2]]
-  result = FromXToExposed(dat, at, finalProb = finalProb.si, from.state = "i")
+  result = FromXToExposed(dat, at, finalProb = finalProb.si, contact_with = "i")
   dat = result[[1]]
   nExpFromInf = result[[2]]
   
@@ -181,12 +201,13 @@ exposure <- function(dat, at) {
   return(dat)
 }
 
-#' 2nd module: 
-#' Infect: transition from exposed to infected, based on progress function from
-#' EpiModel tutorial
+#' Transition between exposed to infected state (one-to-one transition)
 #' 
+#' Whether the transition occurs is governed by a Bernouilli trial with probability equal to ei.rate
 #' 
-
+#' @param dat native Epimodel object
+#' @param at simulation timestep
+#' @export
 infect = function(dat, at){
   # Exposed to infected transition
   
@@ -210,7 +231,7 @@ infect = function(dat, at){
   
   if (nEligInf > 0) { # if anyone is eligible
     # pick those that will be infected accordging to a bernouilli trial
-    vecInf <- which(rbinom(nEligInf, 1, ei.rate) == 1) # like the toss of a coin
+    vecInf <- which(stats::rbinom(nEligInf, 1, ei.rate) == 1) # like the toss of a coin
     if (length(vecInf) > 0) { # if by the trial results somepeople were picked
       idsInf <- idsEligInf[vecInf] 
       # get the id for those and transition them from "e" to "i"
@@ -234,9 +255,15 @@ infect = function(dat, at){
   return(dat)
 }
 
-#' 3rd module
-#' Infection to quarantined
-
+#' Transition bettween infected to quarantined state (one-to-one transition)
+#' 
+#' Whether the transition occurs is governed by a Bernouilli trial with probability equal to ei.rate
+#' 
+#' This transition is useful to model population compliance with Public Health campaigns and their consequences.
+#' 
+#' @param dat native Epimodel object
+#' @param at simulation timestep
+#' @export
 quarantining = function(dat,at){
   # Exposed to infected transition
   
@@ -260,7 +287,7 @@ quarantining = function(dat,at){
   
   if (nEligQuar > 0) { # if anyone is eligible
     # pick those that will be infected accordging to a bernouilli trial
-    vecQuar <- which(rbinom(nEligQuar, 1, iq.rate) == 1) # like the toss of a coin
+    vecQuar <- which(stats::rbinom(nEligQuar, 1, iq.rate) == 1) # like the toss of a coin
     if (length(vecQuar) > 0) { # if by the trial results somepeople were picked
       idsQuar <- idsEligQuar[vecQuar] 
       # get the id for those and transition them from "e" to "i"
@@ -283,9 +310,14 @@ quarantining = function(dat,at){
   return(dat)
 }
 
-#' 4th module:
-#' I/Q to Require hospitalization
-
+#' Transition between the infected or quarantined state to requiring hospitalisation (multi-to-one transition)
+#' 
+#' This can be seen as analog to some sort of complication rate.
+#' Whether the transition occurs is governed by a Bernouilli trial with probability equal to ih.rate or qh.rate
+#' 
+#' @param dat native Epimodel object
+#' @param at simulation timestep
+#' @export
 RequireHospitalization = function(dat,at){
   # Quarantined to Hosp and Infected to Hosp
   
@@ -298,8 +330,6 @@ RequireHospitalization = function(dat,at){
   ih.rate <- dat$param$ih.rate
   qh.rate <- dat$param$qh.rate
   
-
-  
   ## I to H progression
   nHosp <- 0 
   # get IDs of those that are eligible for infection (aka active nodes that are exposed)
@@ -309,7 +339,7 @@ RequireHospitalization = function(dat,at){
   nElig <- length(idsElig)
   
   if (!is.null(dat$attr$age)){
-    lookupHosp = setNames(dat$param$ratesbyAge$hosp.rate/100, # divided by 100 because the things
+    lookupHosp = stats::setNames(dat$param$ratesbyAge$hosp.rate/100, # divided by 100 because the things
                           # is given as proportion
                           dat$param$ratesbyAge$AgeGroup)
     ages = dat$attr$age
@@ -319,7 +349,7 @@ RequireHospitalization = function(dat,at){
   
   if (nElig > 0) { # if anyone is eligible
     # pick those that will be infected accordging to a bernouilli trial
-    vec <- which(rbinom(nElig, 1, ih.rate) == 1) # like the toss of a coin
+    vec <- which(stats::rbinom(nElig, 1, ih.rate) == 1) # like the toss of a coin
     if (length(vec) > 0) { # if by the trial results somepeople were picked
       ids <- idsElig[vec] 
       # get the id for those and transition them from "e" to "i"
@@ -339,7 +369,7 @@ RequireHospitalization = function(dat,at){
   
   if (nElig > 0) { # if anyone is eligible
     # pick those that will be infected accordging to a bernouilli trial
-    vec <- which(rbinom(nElig, 1, qh.rate) == 1) # like the toss of a coin
+    vec <- which(stats::rbinom(nElig, 1, qh.rate) == 1) # like the toss of a coin
     if (length(vec) > 0) { # if by the trial results somepeople were picked
       ids <- idsElig[vec] 
       # get the id for those and transition them from "e" to "i"
@@ -364,10 +394,14 @@ RequireHospitalization = function(dat,at){
   return(dat)
 }
 
-#' 5th module
-#' Any state to recovered
+#' Transition from quarantined, infected, requiring hospitalisation to recovered (multi-to-one transition)
 #' 
-
+#' Whether the transition occurs is governed by a Bernouilli trial with probability equal to qr.rate or ir.rate or
+#' hr.rate. Again this happens sequentially which results in same bias explained in the __exposure__ model 
+#' (see `help(exposure)`)
+#' @param dat native Epimodel object
+#' @param at simulation timestep
+#' @export
 recover = function(dat,at){
   # Quarantined to Hosp and Infected to Hosp
   
@@ -379,8 +413,12 @@ recover = function(dat,at){
   # get the rates to recovery
   qr.rate <- dat$param$qr.rate
   hr.rate <- dat$param$hr.rate
+  ir.rate <- dat$param$ir.rate
   
-  ## H to R progression
+
+  # H -> R progression ------------------------------------------------------
+
+
   nRec <- 0 
   # get IDs of those that are eligible for infection (aka active nodes that are exposed)
   # in this case exposure is a prerequisite to be infected
@@ -390,7 +428,7 @@ recover = function(dat,at){
   
   if (nElig > 0) { # if anyone is eligible
     # pick those that will be infected accordging to a bernouilli trial
-    vec <- which(rbinom(nElig, 1, hr.rate) == 1) # like the toss of a coin
+    vec <- which(stats::rbinom(nElig, 1, hr.rate) == 1) # like the toss of a coin
     if (length(vec) > 0) { # if by the trial results somepeople were picked
       ids <- idsElig[vec] 
       # get the id for those and transition them from "e" to "i"
@@ -401,7 +439,8 @@ recover = function(dat,at){
     }
   }
   
-  ## Q to R progression
+
+  # Q -> R transition -------------------------------------------------------
   # get IDs of those that are eligible for infection (aka active nodes that are exposed)
   # in this case exposure is a prerequisite to be infected
   idsElig <- which(active == 1 & status == "q")
@@ -410,7 +449,7 @@ recover = function(dat,at){
   
   if (nElig > 0) { # if anyone is eligible
     # pick those that will be infected accordging to a bernouilli trial
-    vec <- which(rbinom(nElig, 1, qr.rate) == 1) # like the toss of a coin
+    vec <- which(stats::rbinom(nElig, 1, qr.rate) == 1) # like the toss of a coin
     if (length(vec) > 0) { # if by the trial results somepeople were picked
       ids <- idsElig[vec] 
       # get the id for those and transition them from "e" to "i"
@@ -420,6 +459,28 @@ recover = function(dat,at){
       dat$attr$recTime[ids] <- at
     }
   }
+  
+  # I -> R transition -------------------------------------------------------
+  # get IDs of those that are eligible for infection (aka active nodes that are exposed)
+  # in this case exposure is a prerequisite to be infected
+  idsElig <- which(active == 1 & status == "i")
+  # get number of people that are eligible for infection
+  nElig <- length(idsElig)
+  if (nElig > 0) { # if anyone is eligible
+    # pick those that will be infected accordging to a bernouilli trial
+    vec <- which(stats::rbinom(nElig, 1, ir.rate) == 1) # like the toss of a coin
+    if (length(vec) > 0) { # if by the trial results somepeople were picked
+      ids <- idsElig[vec] 
+      # get the id for those and transition them from "e" to "i"
+      nRec<- nRec + length(ids)
+      status[ids] <- "r"
+      # store hosp time
+      dat$attr$recTime[ids] <- at
+    }
+  }
+
+  # end of transitions ------------------------------------------------------
+
   
   dat$attr$status <- status
   
@@ -435,13 +496,18 @@ recover = function(dat,at){
   return(dat)
 }
 
-#'6th module: fatalities
-#'need hospitalisation to fatality
-#'
-
+#' Transition from requiring hospitalisation to fatality (death from infection)
+#' 
+#' Whether the transition occurs is governed by a Bernouilli trial with probability equal to hf.rate. 
+#' Further more if someone has spent several days in the H compartment that results in a linear increase
+#' in their probability of dying (with a slope of __hosp.tcoeff__). Additionally, if the hospital is at 
+#' full capacity or beyond the chance of becoming a fatality increases for everyone (baseline increased. 
+#' Finally, the hf.rate is dependent on age as per the data in `ratesbyage`.
+#' to __hf.rate.overcap__)
+#' @param dat native Epimodel object
+#' @param at simulation timestep
+#' @export
 fatality = function(dat,at){
-  # Quarantined to Hosp and Infected to Hosp
-  
   # active nodess
   active <- dat$attr$active
   # get status too (s, i, r, e)
@@ -465,7 +531,7 @@ fatality = function(dat,at){
   
   ## by age rates
   if (!is.null(dat$attr$age)){
-    lookupFat = setNames(dat$param$ratesbyAge$fat.rate/100,
+    lookupFat = setNames(dat$param$ratesbyAge$fat.rate/1000,
                          dat$param$ratesbyAge$AgeGroup)
     ages = dat$attr$age
     hf.rate=  lookupFat[ages] # overwrite single value for hf.rate by age specific one
@@ -484,9 +550,9 @@ fatality = function(dat,at){
     }
     hf.rate <- hf.rate + timeInHospElig*hosp.tcoeff*hf.rate
     
-    # pick those that will be infected accordging to a bernouilli trial
-    vec <- which(rbinom(nElig, 1, hf.rate) == 1) # like the toss of a coin
-    if (length(vec) > 0) { # if by the trial results somepeople were picked
+    # pick those that will be infected according to a Bernoulli trial
+    vec <- which(stats::rbinom(nElig, 1, hf.rate) == 1) # like the toss of a coin
+    if (length(vec) > 0) { # if by the trial results some people were picked
       ids <- idsElig[vec] 
       # get the id for those and transition them from "e" to "i"
       nFat<- nFat + length(ids)
@@ -497,7 +563,7 @@ fatality = function(dat,at){
       # counted anymore
       dat$attr$active[ids] <- 0
       dat$attr$exitTime[ids] <- at
-      dat$nw <- deactivate.vertices(dat$nw, onset = at, terminus = Inf,
+      dat$nw <- networkDynamic::deactivate.vertices(dat$nw, onset = at, terminus = Inf,
                                     v = ids, deactivate.edges = TRUE)
     }
   }
@@ -516,10 +582,16 @@ fatality = function(dat,at){
   return(dat)
 }
 
-#' For most this is netsim source code, I will make it clear where I have changed the code
+#' Modification of the EpiModel::netsim function
+#' 
+#' The performed modifications are clearly highlighted.
+#' 
+#' INTERNAL PURPOSE MOSTLY
+#' @keywords internal
+#' @importFrom foreach %dopar%
 custom.netsim <- function(x, param, init, control) {
   
-  crosscheck.net(x, param, init, control)
+  EpiModel::crosscheck.net(x, param, init, control)
   if (!is.null(control[["verbose.FUN"]])) {
     do.call(control[["verbose.FUN"]], list(control, type = "startup"))
   }
@@ -594,7 +666,7 @@ custom.netsim <- function(x, param, init, control) {
   if (ncores > 1) {
     doParallel::registerDoParallel(ncores)
     
-    sout <- foreach(s = 1:nsims) %dopar% {
+    sout <- foreach::foreach(s = 1:nsims) %dopar% {
       
       control$nsims <- 1
       control$currsim <- s
@@ -680,7 +752,15 @@ custom.netsim <- function(x, param, init, control) {
   return(out)
 }
 
-#' Again most of this is source code
+#' Modification of the EpiModel::saveout.net function
+#' 
+#' The performed modifications are clearly highlighted.
+#' 
+#' This function has been modified with the purpose of modifying how the net object is saved
+#' so that all of our custom states and their statistics can be saved.
+#' 
+#' INTERNAL PURPOSE MOSTLY
+#' @keywords internal
 custom.saveout.net <- function(dat, s, out = NULL) {
   
   # Counts number of simulated networks
@@ -818,9 +898,15 @@ custom.saveout.net <- function(dat, s, out = NULL) {
   return(out)
 }
 
-
-#' Custom initialize net
+#' Modification of the EpiModel::initialize.net function
 #' 
+#' The performed modifications are clearly highlighted.
+#' 
+#' This function has been modified with the purpose of modifying how the net object is saved
+#' so that all of our custom states and their statistics can be saved.
+#' 
+#' INTERNAL PURPOSE MOSTLY
+#' @keywords internal
 custom.initialize.net <- function(x, param, init, control, s) {
   
   if (control$start == 1) {
@@ -841,14 +927,14 @@ custom.initialize.net <- function(x, param, init, control, s) {
     modes <- ifelse(nw %n% "bipartite", 2, 1)
     if (control$depend == TRUE) {
       if (class(x$fit) == "stergm") {
-        nw <- network.collapse(nw, at = 1)
+        nw <- networkDynamic::network.collapse(nw, at = 1)
       }
-      nw <- sim_nets(x, nw, nsteps = 1, control)
+      nw <- EpiModel::sim_nets(x, nw, nsteps = 1, control)
     }
     if (control$depend == FALSE) {
-      nw <- sim_nets(x, nw, nsteps = control$nsteps, control)
+      nw <- EpiModel::sim_nets(x, nw, nsteps = control$nsteps, control)
     }
-    nw <- activate.vertices(nw, onset = 1, terminus = Inf)
+    nw <- networkDynamic::activate.vertices(nw, onset = 1, terminus = Inf)
     
     
     # Network Parameters ------------------------------------------------------
@@ -861,21 +947,21 @@ custom.initialize.net <- function(x, param, init, control, s) {
     
     ## Initialize persistent IDs
     if (control$use.pids == TRUE) {
-      dat$nw <- init_pids(dat$nw, dat$control$pid.prefix)
+      dat$nw <- EpiModel::init_pids(dat$nw, dat$control$pid.prefix)
     }
     
     ## Pull network val to attr
-    form <- get_nwparam(dat)$formation
+    form <- EpiModel::get_nwparam(dat)$formation
     
     #fterms <- get_formula_term_attr(form, nw)
-    fterms <- setdiff(list.vertex.attributes(nw), c("active", "vertex.names", "na"))
+    fterms <- setdiff(network::list.vertex.attributes(nw), c("active", "vertex.names", "na"))
     if(length(fterms) == 0) fterms <- NULL
     
-    dat <- copy_toall_attr(dat, at = 1, fterms)
+    dat <- EpiModel::copy_toall_attr(dat, at = 1, fterms)
     
     ## Store current proportions of attr
     dat$temp$fterms <- fterms
-    dat$temp$t1.tab <- get_attr_prop(dat$nw, fterms)
+    dat$temp$t1.tab <- EpiModel::get_attr_prop(dat$nw, fterms)
     
     
     ## Infection Status and Time Modules
@@ -907,9 +993,15 @@ custom.initialize.net <- function(x, param, init, control, s) {
   return(dat)
 }
 
-
-#' Another one very similar to source code
-
+#' Modification of the EpiModel::init_status.net function
+#' 
+#' The performed modifications are clearly highlighted.
+#' 
+#' This function has been modified with the purpose of modifying how the times spent in each 
+#' state
+#' 
+#' INTERNAL PURPOSE MOSTLY
+#' @keywords internal
 custom.init_status.net <- function(dat) {
 
 # Variables ---------------------------------------------------------------
@@ -920,14 +1012,14 @@ r.num <- dat$init$r.num
 r.num.m2 <- dat$init$r.num.m2
 
 status.vector <- dat$init$status.vector
-num <- network.size(dat$nw)
+num <- network::network.size(dat$nw)
 statOnNw <- "status" %in% dat$temp$fterms
 
 modes <- dat$param$modes
 if (modes == 1) {
   mode <- rep(1, num)
 } else {
-  mode <- idmode(dat$nw)
+  mode <- EpiModel::idmode(dat$nw)
 }
 
 type <- dat$control$type
@@ -937,7 +1029,7 @@ type <- dat$control$type
 
 ## Status passed on input network
 if (statOnNw == TRUE) {
-  status <- get.vertex.attribute(dat$nw, "status")
+  status <- network::get.vertex.attribute(dat$nw, "status")
 } else {
   if (!is.null(status.vector)) {
     status <- status.vector
@@ -963,7 +1055,7 @@ dat$attr$active <- rep(1, length(status))
 dat$attr$entrTime <- rep(1, length(status))
 dat$attr$exitTime <- rep(NA, length(status))
 if (tea.status == TRUE) {
-  dat$nw <- activate.vertex.attribute(dat$nw,
+  dat$nw <- networkDynamic::activate.vertex.attribute(dat$nw,
                                       prefix = "testatus",
                                       value = status,
                                       onset = 1,
@@ -991,7 +1083,7 @@ if (!is.null(dat$init$infTime.vector)) {
   } else {
     if (dat$control$type == "SI" || mean(dat$param$rec.rate) == 0) {
       # if no recovery, infTime a uniform draw over the number of sim time steps
-      infTime[idsInf] <- ssample(1:(-dat$control$nsteps + 2),
+      infTime[idsInf] <- EpiModel::ssample(1:(-dat$control$nsteps + 2),
                                  length(idsInf), replace = TRUE)
     } else {
       infTime[idsInf] <- -rgeom(n = length(idsInf), prob = mean(dat$param$rec.rate)) + 2
@@ -1019,9 +1111,15 @@ dat$attr$infTime <- infTime
 return(dat)
 }
 
-
-#' More source code: I've added this bit to be able to store the different number by vertex attribute
-#' (as per epi.by)
+#' Modification of the EpiModel::get_prev.net function
+#' 
+#' The performed modifications are clearly highlighted.
+#' 
+#' This function has been modified with to be able to store the different number 
+#' by vertex attribute (as per epi.by)
+#' 
+#' INTERNAL PURPOSE MOSTLY
+#' @keywords internal
 custom.get_prev.net <- function(dat, at) {
   
   active <- dat$attr$active
@@ -1041,7 +1139,7 @@ custom.get_prev.net <- function(dat, at) {
   status <- l$status
   
   if (modes == 2) {
-    mode <- idmode(dat$nw)[active == 1]
+    mode <- EpiModel::idmode(dat$nw)[active == 1]
   }
   
   ## Subsetting for epi.by control

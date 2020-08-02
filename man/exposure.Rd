@@ -2,12 +2,29 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{exposure}
 \alias{exposure}
-\title{This function describes how people get EXPOSED
-FROM THOSE INFECTED, QUARANTINED AND EXPOSED}
+\title{Transition to exposed (from susceptible) module}
 \usage{
 exposure(dat, at)
 }
+\arguments{
+\item{dat}{native Epimodel object}
+
+\item{at}{simulation timestep}
+}
 \description{
-This function describes how people get EXPOSED
-FROM THOSE INFECTED, QUARANTINED AND EXPOSED
+Models transition to the exposed state. Makes use of the FromXtoExposed function.
+}
+\details{
+The final probability is calculated based on the contact rate (act.rate) and infection probability (inf.prob)
+using the following equation:
+\deqn{finalProb = 1 - (1 - inf.prob)^act.rate}
+Read more at the pages 65-66 of \href{http://courses.washington.edu/b578a/readings/bookchap4.pdf}{this book}
+This corresponding to a Binomial trial with a p of success (transmission equal) to \strong{inf.prob}
+and \strong{act.rate} trials
+
+Currently, the transition are processed sequentially. The transition in question are one-to-multiple state transitions]
+which should be modelled concurrently using transition matrices. The current implementation introduces bias as
+the probability of the transmission not being succesful is greater than it would be if this was to be processed
+concurrently. Read more \href{https://github.com/statnet/EpiModel/issues/417}{here} for further discussion or
+get in touch if you implement this
 }

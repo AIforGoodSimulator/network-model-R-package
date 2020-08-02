@@ -2,13 +2,30 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{FromXToExposed}
 \alias{FromXToExposed}
-\title{1st Module to change:
-Susceptible people get exposed instead of infected,
-this script replaces infection.net}
+\title{Transition from susceptible to exposed upon contact with transmitting individuals}
 \usage{
-FromXToExposed(dat, at, finalProb, from.state = "i")
+FromXToExposed(dat, at, finalProb, contact_with = "i")
+}
+\arguments{
+\item{dat}{Native EpiModel object}
+
+\item{at}{simulation timestep}
+
+\item{finalProb}{Probability of transition between the susceptible and the infected state upon contact with individuals
+from the state \strong{contact_with}, can be a vector of lenght equal to the number of simulation timesteps.}
+
+\item{contact_with}{State of the individuals that the susceptible come into contact with}
 }
 \description{
+Transmitting individuals are exposed, infected and quarantined. Whether individuals that come upon contact
+with transmitting individuals is drawn from a Bernoulli distribution with P(transmitted) = \strong{finalProb}. To
+see how finalProb is calculate please see the documentation for the \strong{exposure} function
+This model assumes an exposure period before an infection period for any invidividual exposed to the
+virus.
+}
+\details{
+This script replaces infection.net
 check ?infection.net for specification of what the base module does
-I believe in current state this supports act.rate being vectors
+
+This function is called in the \strong{exposure} function
 }

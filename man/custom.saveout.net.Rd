@@ -2,10 +2,17 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{custom.saveout.net}
 \alias{custom.saveout.net}
-\title{Again most of this is source code}
+\title{Modification of the EpiModel::saveout.net function}
 \usage{
 custom.saveout.net(dat, s, out = NULL)
 }
 \description{
-Again most of this is source code
+The performed modifications are clearly highlighted.
 }
+\details{
+This function has been modified with the purpose of modifying how the net object is saved
+so that all of our custom states and their statistics can be saved.
+
+INTERNAL PURPOSE MOSTLY
+}
+\keyword{internal}
