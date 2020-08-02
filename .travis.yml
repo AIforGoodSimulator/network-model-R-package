@@ -2,3 +2,7 @@
 
 language: R
 cache: packages
+
+repos:
+  github: https://github.com/AIforGoodSimulator/network-model-R
+
