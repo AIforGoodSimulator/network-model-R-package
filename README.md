@@ -1,5 +1,6 @@
 # network-model-R-package
 
+<<<<<<< HEAD
 This package has been made to make network epidemic models of COVID19 spread in refugee camps.
 
 To install run:
