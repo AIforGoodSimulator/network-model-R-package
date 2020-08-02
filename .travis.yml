@@ -1,8 +1,7 @@
 language: r
 
 before_install:
-  sudo apt-get install libmagick++-dev
-
+if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install libmagick++-dev; else brew install bar; fi
 os:
   - linux
   - osx
