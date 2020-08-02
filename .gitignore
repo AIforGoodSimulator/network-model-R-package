@@ -2,4 +2,8 @@
 .RData
 .Rproj.user
 
-renv/
+renv/library
+renv/.gitignore
+renv/staging
+renv/settings.dcf
+
