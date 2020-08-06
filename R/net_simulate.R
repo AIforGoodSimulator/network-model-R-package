@@ -312,7 +312,7 @@ net_simulate = function(
     recovery.FUN = NULL,
     infection.FUN = NULL,
     departures.FUN = EpiModel::departures.net,
-    get_prev.FUN = custom.get_prev.net,
+    prevalence.FUN = custom.get_prev.net,
     skip_check = FALSE,
     resimulate.network = T
   )
