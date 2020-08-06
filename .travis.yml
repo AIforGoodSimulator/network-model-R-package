@@ -5,6 +5,5 @@ before_install:
 os:
   - linux
   - osx
-  - windows
 pandoc: false
 latex: false
