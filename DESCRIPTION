@@ -20,7 +20,7 @@ Imports:
     plotly,
     animation,
     dplyr,
-    EpiModel,
+    EpiModel(== 1.8.0),
     ggplot2,
     intergraph,
     igraph,
@@ -29,4 +29,5 @@ Imports:
     network,
     foreach,
     doParallel,
-    magrittr
+    magrittr,
+    tergmLite
