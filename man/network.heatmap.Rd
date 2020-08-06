@@ -14,3 +14,7 @@ network.heatmap(net_build_object, at = 1)
 \description{
 Get network heatmap at a given time step
 }
+\examples{
+data(net_example)
+network.heatmap(net_example, at = 2)
+}

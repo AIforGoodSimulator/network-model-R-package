@@ -1,18 +1,26 @@
 #' Plot epidemic curves for each state
 #' 
 #' @param net_build_object objected returned by `net_simulate`
+#' 
+#' @example 
+#' data(net_example)
+#' plot_state(net_example)
 #' @export
 plot_states = function(net_build_object){
-  res = as.data.frame(net_build_object$network_simulation)
+  res = as.data.frame(net_build_object$network_simulation_object)
   plotly::ggplotly(
     res[, c('s.num', 'e.num', 'i.num', 'q.num',
             'h.num', 'r.num', 'f.num', 'num', 'time')] %>% 
-      dplyr::group_by('time') %>%
+      dplyr::group_by(time) %>%
       dplyr::summarise_all(~mean(.)) %>% 
-      tidyr::pivot_longer(-c('time')) %>%
-      ggplot2::ggplot(ggplot2::aes(x = 'time', y = 'value', color = 'name'))+
+      tidyr::pivot_longer(-c(time)) %>%
+      ggplot2::ggplot(
+        ggplot2::aes(x = time, y = value, color = name))+
       ggplot2::geom_line(size = 1)+
-      ggplot2::scale_color_brewer(palette = "Set1")
+      ggplot2::scale_color_brewer(palette = "Set1")+
+      ggplot2::xlab('Simulation time-steps')+
+      ggplot2::ylab('Number of individuals')+
+      ggplot2::labs(color = 'State')
   )
 }
 
@@ -20,6 +28,9 @@ plot_states = function(net_build_object){
 #' 
 #' @param net_build_object objected returned by `net_simulate`
 #' @param at timestep
+#' @examples
+#' data(net_example)
+#' network.heatmap(net_example, at = 2)
 #' @export
 network.heatmap = function(net_build_object, at = 1){
   
@@ -54,14 +65,22 @@ network.heatmap = function(net_build_object, at = 1){
 #' 
 #' @param net_build_object objected returned by `net_simulate`
 #' @param interval interval of timesteps to produce GIF in
+#' @examples
+#' \dontrun{
+#' data(net_example)
+#' network.heatmap(net_example, at = 2)
+#' }
 #' @export
 network.heatmap.GIF = function(net_build_object, interval = NULL){
   
-  nw_object = EpiModel::get_network(net_build_object$network_simulation)
+  if (is.null(interval)){
+    stop('Please provide a valid interval, e.g. 1:10')
+  } 
+  nw_object = EpiModel::get_network(net_build_object$network_simulation_object)
   animation::ani.record(reset = TRUE)  # clear history before recording
   
   if (is.null(interval)){
-    interval = nrow(as.data.frame(net_build_object$network_simulation))
+    interval = nrow(as.data.frame(net_build_object$network_simulation_object))
   }
   
   for (at in interval){
@@ -94,7 +113,7 @@ network.heatmap.GIF = function(net_build_object, interval = NULL){
   oopts = animation::ani.options(interval = 0.5)
   animation::saveGIF(animation::ani.replay(),
                      movie.name = 'network.gif')
-  print('GIF created.')
+  print(paste0('GIF created at ', getwd(), 'network.gif'))
 }
 
 

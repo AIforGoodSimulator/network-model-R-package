@@ -127,7 +127,7 @@ immigration)}
 
 \item{dr.rate}{departure rate for susceptible individuals (defaults to d.rate)}
 
-\item{i.num}{Initial number of infected individuals (defaults to 1)}
+\item{i.num}{Initial number of infected individuals (defanetults to 1)}
 
 \item{r.num}{Initial number of recovered individuals (defaults to 0)}
 

@@ -65,7 +65,7 @@ calculate.max.edges = function(n){
 #' @param di.rate departure rate for infected individuals (defaults to d.rate)
 #' @param ds.rate departure rate for susceptible individuals (defaults to d.rate)
 #' @param dr.rate departure rate for susceptible individuals (defaults to d.rate)
-#' @param i.num Initial number of infected individuals (defaults to 1)
+#' @param i.num Initial number of infected individuals (defanetults to 1)
 #' @param r.num Initial number of recovered individuals (defaults to 0)
 #' @param e.num Initial number of exposed individuals (default to 0)
 #' @param s.num Initial number of susceptible individuals (defaults to n-1)

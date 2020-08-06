@@ -14,3 +14,9 @@ network.heatmap.GIF(net_build_object, interval = NULL)
 \description{
 Get network heatmap at all timesteps as a GIF
 }
+\examples{
+\dontrun{
+data(net_example)
+network.heatmap(net_example, at = 2)
+}
+}

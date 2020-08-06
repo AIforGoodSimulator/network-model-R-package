@@ -19,3 +19,10 @@
 #'   \item{fat.rate}{Fatality rate by age group (units: ?number of fatalities per case/1000)}
 #' }
 "ratesbyage"
+
+#' Example network object
+#' 
+#' Object that is returned from running `net_simulate()`, available
+#' for plot examples 
+#' 
+"net_example"
