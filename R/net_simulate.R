@@ -314,7 +314,7 @@ net_simulate = function(
     departures.FUN = EpiModel::departures.net,
     get_prev.FUN = custom.get_prev.net,
     skip_check = FALSE,
-    depend = T
+    resimulate.network = T
   )
   
   cat('Running simulation, this may take a while...\n')
