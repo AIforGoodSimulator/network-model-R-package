@@ -2,7 +2,7 @@
 #' 
 #' @param net_build_object objected returned by `net_simulate`
 #' 
-#' @example 
+#' @examples
 #' data(net_example)
 #' plot_state(net_example)
 #' @export
