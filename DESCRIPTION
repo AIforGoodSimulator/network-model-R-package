@@ -1,6 +1,6 @@
 Package: CampNetworkSimulator
 Title: CNS(CampNetworkSimulator)
-Version: 0.0.0
+Version: 0.0.1
 Authors@R: 
     person(given = "Luis",
            family = "Chaves",
