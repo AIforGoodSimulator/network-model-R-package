@@ -2,7 +2,15 @@
 % Please edit documentation in R/SEIQHRFNetModules.R
 \name{FromXToExposed}
 \alias{FromXToExposed}
-\title{Transition from susceptible to exposed upon contact with transmitting individuals}
+\title{Network Modules
+Based majorly in https://timchurches.github.io/blog/posts/2020-03-10-modelling-the-effects-of-public-health-interventions-on-covid-19-transmission-part-1/
+S, Susceptible
+E, Exposed,
+I, Infected
+Q, Quarantined
+H, Need hospitalization
+R, Recovered
+F, Fatality}
 \usage{
 FromXToExposed(dat, at, finalProb, contact_with = "i")
 }
@@ -17,13 +25,16 @@ from the state \strong{contact_with}, can be a vector of lenght equal to the num
 \item{contact_with}{State of the individuals that the susceptible come into contact with}
 }
 \description{
+In this work we are going to redefine practically all base modules from EpiModel
+Transition from susceptible to exposed upon contact with transmitting individuals
+}
+\details{
 Transmitting individuals are exposed, infected and quarantined. Whether individuals that come upon contact
 with transmitting individuals is drawn from a Bernoulli distribution with P(transmitted) = \strong{finalProb}. To
 see how finalProb is calculate please see the documentation for the \strong{exposure} function
 This model assumes an exposure period before an infection period for any invidividual exposed to the
 virus.
-}
-\details{
+
 This script replaces infection.net
 check ?infection.net for specification of what the base module does
 

@@ -18,7 +18,8 @@ calculate.max.edges = function(n){
 #' F - Fatality (due to infection)
 #' 
 #' @param n numbers of individuals, a random sample of this size will be taken from the Camp's population
-#' @param nsims number of network simulations
+#' @param nsims number of network simulations (default: 3) ~ simulation sample size
+#' @param nsims_dx number of network simulation for network diagnostics (default: 100)
 #' @param nsteps number of timesteps (days, hours, weeks, arbitrary choice), the rates need to be defined in units
 #' relative to this metric (e.g number of cases/day or /hour or /week)
 #' @param prop.isobox Proportion of individuals in iso boxes, in this first implementation only two kinds of housing units 
@@ -87,6 +88,7 @@ calculate.max.edges = function(n){
 net_simulate = function(
   n = 100,
   nsims = 3,
+  nsims_dx = 100, 
   nsteps = 90,
   prop.isobox = 0.43,
   iso.capacity = 10,
@@ -252,7 +254,7 @@ net_simulate = function(
   # Network diagnostics
   cat('Getting network diagnostics\n')
   dx <- EpiModel::netdx(est,
-                        nsims = 1e3,
+                        nsims = nsims_dx,
                         nsteps = 90,
                         ncores = cores,
                         dynamic = FALSE,
@@ -297,6 +299,7 @@ net_simulate = function(
   )
   
   control = EpiModel::control.net(
+    type = NULL,
     nsims = nsims, 
     nsteps = nsteps,
     # delete.nodes = T,  this does not work for now
@@ -309,10 +312,14 @@ net_simulate = function(
     hospitalize.FUN = RequireHospitalization,
     recover.FUN = recover,
     fatality.FUN = fatality,
-    departures.FUN = EpiModel::departures.net,
+    departures.FUN = custom.departures.net,
     prevalence.FUN = custom.get_prev.net,
     skip_check = FALSE,
-    resimulate.network = T
+    resimulate.network = T,
+    module.order = c('exposure.FUN', 'infect.FUN',
+                     'quarantine.FUN', 'hospitalize.FUN', 'recover.FUN',
+                     'fatality.FUN', 'departures.FUN', 'prevalence.FUN'),
+    save.nwstats = FALSE
   )
   
   cat('Running simulation, this may take a while...\n')

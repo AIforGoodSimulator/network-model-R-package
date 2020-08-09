@@ -10,39 +10,6 @@
 #'
 #' In this work we are going to redefine practically all base modules from EpiModel 
 
-#' Find edges that are in touch and are in different status
-#'
-#' The EpiModel discordedgelist function finds susceptible individuals that are in touch with exposed individuals.
-#' In our case, because susceptible individuals can be in touch with exposed, quarantined or infected individuals
-#' we have extended the function to be able to match susceptible individuals to individuals in either of those states.
-#'
-#' @param dat native simulation object from EpiModel
-#' @param at timestep (also native to EpimModel)
-#' @param from that susceptible individuals will be matched to (options: i, q, e)
-#' @export
-custom_discord_edgelist <- function(dat, at, from = "i") {
-  
-  status <- dat$attr$status
-  el <- networkDynamic::get.dyads.active(dat$nw, at = at)
-  
-  del <- NULL
-  if (nrow(el) > 0) {
-    el <- el[sample(1:nrow(el)), , drop = FALSE]
-    stat <- matrix(status[el], ncol = 2)
-    isInf <- matrix(stat %in% from, ncol = 2)
-    isSus <- matrix(stat %in% "s", ncol = 2)
-    SIpairs <- el[isSus[, 1] * isInf[, 2] == 1, , drop = FALSE]
-    ISpairs <- el[isSus[, 2] * isInf[, 1] == 1, , drop = FALSE]
-    pairs <- rbind(SIpairs, ISpairs[, 2:1])
-    if (nrow(pairs) > 0) {
-      sus <- pairs[, 1]
-      inf <- pairs[, 2]
-      del <- data.frame(at, sus, inf)
-    }
-  }
-  
-  return(del)
-}
 
 #' Transition from susceptible to exposed upon contact with transmitting individuals
 #'
@@ -132,7 +99,7 @@ FromXToExposed = function(dat, at, finalProb, contact_with = "i"){
 #' @param at simulation timestep
 #' @export
 exposure <- function(dat, at) {
-
+  
   transProb.se <- ifelse(!is.null(dat$param$inf.prob.se), 
                          dat$param$inf.prob.se, 
                          ifelse(!is.null(dat$param$inf.prob.si),
@@ -186,7 +153,7 @@ exposure <- function(dat, at) {
   
   nExp = nExpFromQuar+nExpFromExp+nExpFromInf
   
-
+  
   # Store results from this iteration and carry on --------------------------
   if (at == 2) {
     # set flow of susceptible to infected for at 1 and at 2
@@ -242,7 +209,7 @@ infect = function(dat, at){
   }
   
   dat$attr$status <- status
-
+  
   if (at == 2) {
     dat$epi$ei.flow <- c(0, nInf)
     dat$epi$i.num = c(0, sum(active == 1 & status == "i"))
@@ -340,8 +307,8 @@ RequireHospitalization = function(dat,at){
   
   if (!is.null(dat$attr$age)){
     lookupHosp = stats::setNames(dat$param$ratesbyAge$hosp.rate/100, # divided by 100 because the things
-                          # is given as proportion
-                          dat$param$ratesbyAge$AgeGroup)
+                                 # is given as proportion
+                                 dat$param$ratesbyAge$AgeGroup)
     ages = dat$attr$age
     ih.rate = lookupHosp[ages] # overwrite single value for hf.rate by age specific one
     ih.rate = ih.rate[idsElig]
@@ -415,10 +382,10 @@ recover = function(dat,at){
   hr.rate <- dat$param$hr.rate
   ir.rate <- dat$param$ir.rate
   
-
+  
   # H -> R progression ------------------------------------------------------
-
-
+  
+  
   nRec <- 0 
   # get IDs of those that are eligible for infection (aka active nodes that are exposed)
   # in this case exposure is a prerequisite to be infected
@@ -439,7 +406,7 @@ recover = function(dat,at){
     }
   }
   
-
+  
   # Q -> R transition -------------------------------------------------------
   # get IDs of those that are eligible for infection (aka active nodes that are exposed)
   # in this case exposure is a prerequisite to be infected
@@ -478,9 +445,9 @@ recover = function(dat,at){
       dat$attr$recTime[ids] <- at
     }
   }
-
+  
   # end of transitions ------------------------------------------------------
-
+  
   
   dat$attr$status <- status
   
@@ -534,7 +501,7 @@ fatality = function(dat,at){
     lookupFat = setNames(dat$param$ratesbyAge$fat.rate/1000,
                          dat$param$ratesbyAge$AgeGroup)
     ages = dat$attr$age
-    hf.rate=  lookupFat[ages] # overwrite single value for hf.rate by age specific one
+    hf.rate = lookupFat[ages] # overwrite single value for hf.rate by age specific one
     hf.rate = hf.rate[idsElig]
   }
   
@@ -563,8 +530,8 @@ fatality = function(dat,at){
       # counted anymore
       dat$attr$active[ids] <- 0
       dat$attr$exitTime[ids] <- at
-      dat$nw <- networkDynamic::deactivate.vertices(dat$nw, onset = at, terminus = Inf,
-                                    v = ids, deactivate.edges = TRUE)
+      dat$nw[[1]] <- networkDynamic::deactivate.vertices(dat$nw[[1]], onset = at, terminus = Inf,
+                                                    v = ids, deactivate.edges = TRUE)
     }
   }
   
@@ -582,1097 +549,90 @@ fatality = function(dat,at){
   return(dat)
 }
 
-#' Modification of the EpiModel::netsim function
-#' 
-#' The performed modifications are clearly highlighted.
-#' 
-#' INTERNAL PURPOSE MOSTLY
-#' @keywords internal
-#' @importFrom foreach %dopar%
-custom.netsim <- function(x, param, init, control) {
+#' @title Departures: netsim Module
+#'
+#' @description This function simulates departure for use in \link{netsim} simulations.
+#'
+#' @param dat Master list object containing a \code{networkDynamic} object and other
+#'        initialization information passed from \code{\link{netsim}}.
+#' @param at Current time step.
+#'
+#' @seealso \code{\link{netsim}}
+#'
+#' @export
+#' @keywords netMod internal
+#' @source EpiModel 2.0 source code
+custom.departures.net <- function(dat, at) {
   
-  EpiModel::crosscheck.net(x, param, init, control)
-  if (!is.null(control[["verbose.FUN"]])) {
-    do.call(control[["verbose.FUN"]], list(control, type = "startup"))
-  }
-  
-  nsims <- control$nsims
-  ncores <- ifelse(nsims == 1, 1, min(parallel::detectCores(), control$ncores))
-  control$ncores <- ncores
-  
-  if (is.null(control$depend)) {
-    control$depend <- FALSE
-  }
-  
-  if (ncores == 1) {
-    for (s in 1:control$nsims) {
-      
-      ## Initialization Module
-      if (!is.null(control[["initialize.FUN"]])) {
-        dat <- do.call(control[["initialize.FUN"]], list(x, param, init, control, s))
-      }
-      
-      
-      ### TIME LOOP
-      if (control$nsteps > 1) {
-        for (at in max(2, control$start):control$nsteps) {
-          
-          ## Module order
-          morder <- control$module.order
-          if (is.null(morder)) {
-            lim.bi.mods <- control$bi.mods[-which(control$bi.mods %in%
-                                                    c("initialize.FUN", "verbose.FUN"))]
-            morder <- c(control$user.mods, lim.bi.mods)
-          }
-          
-          ## Evaluate modules
-          for (i in seq_along(morder)) {
-            dat <- do.call(control[[morder[i]]], list(dat, at))
-          }
-          
-          ## Verbose module
-          if (!is.null(control[["verbose.FUN"]])) {
-            do.call(control[["verbose.FUN"]], list(dat, type = "progress", s, at))
-          }
-          
-        }
-      }
-      
-      # Set output
-      if (s == 1) {
-        ##################################################################
-        ##                         Changed here                         ##
-        ##################################################################
-        ## out <- saveout.net(dat, s)
-        out = custom.saveout.net(dat, s)
-        ##################################################################
-        ##                         Changed here                         ##
-        ##################################################################
-        
-      } else {
-        ##################################################################
-        ##                         Changed here                         ##
-        ##################################################################
-        # out <- saveout.net(dat, s, out)
-        out = custom.saveout.net(dat, s, out)
-        ##################################################################
-        ##                         Changed here                         ##
-        ##################################################################
-      }
-      class(out) <- "netsim"
-    }
-  }
-  
-  if (ncores > 1) {
-    doParallel::registerDoParallel(ncores)
-    
-    sout <- foreach::foreach(s = 1:nsims) %dopar% {
-      
-      control$nsims <- 1
-      control$currsim <- s
-      
-      ## Initialization Module
-      if (!is.null(control[["initialize.FUN"]])) {
-        dat <- do.call(control[["initialize.FUN"]], list(x, param, init, control, s))
-      }
-      
-      
-      ### TIME LOOP
-      if (control$nsteps > 1) {
-        for (at in max(2, control$start):control$nsteps) {
-          
-          ## Module order
-          morder <- control$module.order
-          if (is.null(morder)) {
-            lim.bi.mods <- control$bi.mods[-which(control$bi.mods %in%
-                                                    c("initialize.FUN", "verbose.FUN"))]
-            morder <- c(control$user.mods, lim.bi.mods)
-          }
-          
-          ## Evaluate modules
-          for (i in seq_along(morder)) {
-            dat <- do.call(control[[morder[i]]], list(dat, at))
-          }
-          
-          ## Verbose module
-          if (!is.null(control[["verbose.FUN"]])) {
-            do.call(control[["verbose.FUN"]], list(dat, type = "progress", s, at))
-          }
-          
-        }
-      }
-      
-      # Set output
-      ## out <- saveout.net(dat, s = 1)
-      ##################################################################
-      ##                         Changed here                         ##
-      ##################################################################
-      out = custom.saveout.net(dat, s = 1)
-      ##################################################################
-      ##                         Changed here                         ##
-      ##################################################################
-      
-      
-      class(out) <- "netsim"
-      return(out)
-    }
-    
-    #################################################################
-    ##                           my code                           ##
-    #################################################################
-    
-    collected_times = list()
-    # collect the times from sout then delete them
-    for (i in 1:length(sout)) {
-      collected_times[[paste0("sim", i)]] <- sout[[i]]$times$sim1 
-      sout[[i]]$times <- NULL
-    }
-    
-    #################################################################
-    ##                           my code                           ##
-    #################################################################
-    
-    merged.out <- sout[[1]]
-    for (i in 2:length(sout)) {
-      merged.out <- merge(merged.out, sout[[i]], param.error = FALSE)
-    }
-    out <- merged.out
-    
-    #################################################################
-    ##                           my code                           ##
-    #################################################################
-    out$times = collected_times
-    #################################################################
-    ##                           my code                           ##
-    #################################################################
-    
-    class(out) <- "netsim"
-  } # end of parallel execution
-  
-  return(out)
-}
-
-#' Modification of the EpiModel::saveout.net function
-#' 
-#' The performed modifications are clearly highlighted.
-#' 
-#' This function has been modified with the purpose of modifying how the net object is saved
-#' so that all of our custom states and their statistics can be saved.
-#' 
-#' INTERNAL PURPOSE MOSTLY
-#' @keywords internal
-custom.saveout.net <- function(dat, s, out = NULL) {
-  
-  # Counts number of simulated networks
-  num.nw <- ifelse(any(class(dat$nw) == "network"), 1, length(dat$nw))
-  
-  if (s == 1) {
-    out <- list()
-    out$param <- dat$param
-    out$control <- dat$control
-    out$nwparam <- dat$nwparam
-    out$control$num.nw <- num.nw
-    
-    out$epi <- list()
-    for (j in 1:length(dat$epi)) {
-      out$epi[[names(dat$epi)[j]]] <- data.frame(dat$epi[j])
-    }
-    
-    ##########################################################
-    # get transitions times
-    ##########################################################
-    out$times[[paste0("sim",s)]] = data.frame(expTime = dat$attr$expTime,
-                                              infTime = dat$attr$infTime,
-                                              quarTime = dat$attr$quarTime,
-                                              recTime = dat$attr$recTime,
-                                              hospTime = dat$attr$hospTime,
-                                              dischTime = dat$attr$dischTime,
-                                              fatTime = dat$attr$fatTime,
-                                              exitTime = dat$attr$exitTime)
-    
-    ##########################################################
-    #       #       #       #       #       #       #       #
-    ##########################################################
-    
-    out$stats <- list()
-    if (dat$control$save.nwstats == TRUE) {
-      out$stats$nwstats <- list(dat$stats$nwstats)
-    }
-    if (dat$control$save.transmat == TRUE) {
-      if (!is.null(dat$stats$transmat)) {
-        row.names(dat$stats$transmat) <- 1:nrow(dat$stats$transmat)
-        out$stats$transmat <- list(dat$stats$transmat)
-      } else {
-        out$stats$transmat <- list(data.frame())
-      }
-      class(out$stats$transmat) <- c("transmat", class(out$stats$transmat))
-    }
-    
-    if (dat$control$save.network == TRUE) {
-      out$network <- list(dat$nw)
-    }
-    
-    if (!is.null(dat$control$save.other)) {
-      for (i in 1:length(dat$control$save.other)) {
-        el.name <- dat$control$save.other[i]
-        out[[el.name]] <- list(dat[[el.name]])
-      }
-    }
-  }
-  
-  if (s > 1) {
-    for (j in 1:length(dat$epi)) {
-      out$epi[[names(dat$epi)[j]]][, s] <- data.frame(dat$epi[j])
-    }
-    
-    ##########################################################
-    # get transitions times
-    ##########################################################
-    out$times[[paste0("sim",s)]] = data.frame(expTime = dat$attr$expTime,
-                                              infTime = dat$attr$infTime,
-                                              quarTime = dat$attr$quarTime,
-                                              recTime = dat$attr$recTime,
-                                              hospTime = dat$attr$hospTime,
-                                              dischTime = dat$attr$dischTime,
-                                              fatTime = dat$attr$fatTime,
-                                              exitTime = dat$attr$exitTime)
-    
-    ##########################################################
-    #       #       #       #       #       #       #       #
-    ##########################################################
-    
-    if (dat$control$save.nwstats == TRUE) {
-      out$stats$nwstats[[s]] <- dat$stats$nwstats
-    }
-    if (dat$control$save.transmat == TRUE) {
-      if (!is.null(dat$stats$transmat)) {
-        row.names(dat$stats$transmat) <- 1:nrow(dat$stats$transmat)
-        out$stats$transmat[[s]] <- dat$stats$transmat
-      } else {
-        out$stats$transmat[[s]] <- data.frame()
-      }
-    }
-    if (dat$control$save.network == TRUE) {
-      out$network[[s]] <- dat$nw
-    }
-    
-    if (!is.null(dat$control$save.other)) {
-      for (i in 1:length(dat$control$save.other)) {
-        el.name <- dat$control$save.other[i]
-        out[[el.name]][[s]] <- dat[[el.name]]
-      }
-    }
-  }
-
-  
-  ## Final processing
-  if (s == dat$control$nsims) {
-    
-    # Set names for out
-    simnames <- paste0("sim", 1:dat$control$nsims)
-    for (i in as.vector(which(lapply(out$epi, class) == "data.frame"))) {
-      colnames(out$epi[[i]]) <- simnames
-    }
-    if (dat$control$save.nwstats == TRUE) {
-      names(out$stats$nwstats) <- simnames
-    }
-    if (dat$control$save.transmat == TRUE) {
-      names(out$stats$transmat) <- simnames[1:length(out$stats$transmat)]
-    }
-    if (dat$control$save.network == TRUE) {
-      names(out$network) <- simnames
-    }
-    
-    # Remove functions from control list
-    ftodel <- grep(".FUN", names(out$control), value = TRUE)
-    out$control[ftodel] <- NULL
-    out$control$currsim <- NULL
-    environment(out$control$nwstats.formula) <- NULL
-    
-    if (!("temp" %in% dat$control$save.other)) {
-      out$temp <- NULL
-    }
-    
-  }
-  
-  return(out)
-}
-
-#' Modification of the EpiModel::initialize.net function
-#' 
-#' The performed modifications are clearly highlighted.
-#' 
-#' This function has been modified with the purpose of modifying how the net object is saved
-#' so that all of our custom states and their statistics can be saved.
-#' 
-#' INTERNAL PURPOSE MOSTLY
-#' @keywords internal
-#' 
-custom.initialize.net <- function(x, param, init, control, s) {
-  
-  if (control$start == 1) {
-    
-    # Master Data List --------------------------------------------------------
-    dat <- list()
-    dat$param <- param
-    dat$init <- init
-    dat$control <- control
-    
-    dat$attr <- list()
-    dat$stats <- list()
-    dat$temp <- list()
-    
-    # Initial Network Simulation ----------------------------------------------
-    if (x$edapprox == TRUE) {
-      nw <- stats::simulate(x$fit, basis = x$fit$newnetwork,
-                     control = control$set.control.ergm)
-    } else {
-      nw <- x$fit$network
-    }
-    if (control$resimulate.network == TRUE) {
-      nw <- EpiModel::sim_nets(x, nw, nsteps = 1, control)
-    } else {
-      nw <- EpiModel::sim_nets(x, nw, nsteps = control$nsteps, control)
-    }
-    nw <- networkDynamic::activate.vertices(nw, onset = 1, terminus = Inf)
-    dat$nw[[1]] <- nw
-    
-    # Network Parameters ------------------------------------------------------
-    dat$nwparam <- list(x[-which(names(x) == "fit")])
-    groups <- length(unique(tergmLite::get_vertex_attribute(nw, "group")))
-    dat <- EpiModel::set_param(dat, "groups", groups)
-    
-    # Nodal Attributes --------------------------------------------------------
-    
-    # Standard attributes
-    num <- network::network.size(nw)
-    dat <- EpiModel::set_attr(dat, "active", rep(1, num), override.length.check = TRUE)
-    dat <- EpiModel::set_attr(dat, "entrTime", rep(1, num))
-    dat <- EpiModel::set_attr(dat, "exitTime", rep(NA, num))
-    
-    ## Pull attr on nw to dat$attr
-    dat <- EpiModel::copy_nwattr_to_datattr(dat)
-    
-    ## Store current proportions of attr
-    nwterms <- EpiModel::get_network_term_attr(nw)
-    if (!is.null(nwterms)) {
-      dat$temp$nwterms <- nwterms
-      dat$temp$t1.tab <- EpiModel::get_attr_prop(dat, nwterms)
-    }
-    
-    ## Infection Status and Time
-    dat <- custom.init_status.net(dat)
-    
-    # Conversions for tergmLite
-    if (control$tergmLite == TRUE) {
-      dat <- tergmLite::init_tergmLite(dat)
-    }
-    
-    ## Infection Status and Time Modules
-    ##################################################################
-    ##                       This is modified                       ##
-    ##################################################################
-    # dat <- init_status.net(dat)
-    dat = custom.init_status.net(dat)
-    ##################################################################
-    ##                       This is modified                       ##
-    ##################################################################
-    
-    # Summary Stats -----------------------------------------------------------
-    dat <- do.call(control[["prevalence.FUN"]],list(dat, at = 1))
-    
-    
-    # Restart/Reinit Simulations ----------------------------------------------
-  } else if (control$start > 1) {
-    dat <- list()
-    
-    dat$nw <- x$network[[s]]
-    dat$param <- x$param
-    dat$control <- control
-    dat$nwparam <- x$nwparam
-    dat$epi <- sapply(x$epi, function(var) var[s])
-    names(dat$epi) <- names(x$epi)
-    dat$attr <- x$attr[[s]]
-    dat$stats <- sapply(x$stats, function(var) var[[s]])
-    dat$temp <- list()
-  }
-  
-  return(dat)
-}
-
-# custom.initialize.net <- function(x, param, init, control, s) {
-#   
-#   if (control$start == 1) {
-#     # Master Data List --------------------------------------------------------
-#     dat <- list()
-#     dat$param <- param
-#     dat$init <- init
-#     dat$control <- control
-#     
-#     dat$attr <- list()
-#     dat$stats <- list()
-#     dat$temp <- list()
-#     
-#     
-#     # Network Simulation ------------------------------------------------------
-#     nw <- simulate(x$fit, basis = x$fit$newnetwork,
-#                    control = control$set.control.ergm)
-#     modes <- ifelse(nw %n% "bipartite", 2, 1)
-#     if (control$depend == TRUE) {
-#       if (class(x$fit) == "stergm") {
-#         nw <- networkDynamic::network.collapse(nw, at = 1)
-#       }
-#       nw <- EpiModel::sim_nets(x, nw, nsteps = 1, control)
-#     }
-#     if (control$depend == FALSE) {
-#       nw <- EpiModel::sim_nets(x, nw, nsteps = control$nsteps, control)
-#     }
-#     nw <- networkDynamic::activate.vertices(nw, onset = 1, terminus = Inf)
-#     
-#     
-#     # Network Parameters ------------------------------------------------------
-#     dat$nw <- nw
-#     dat$nwparam <- list(x[-which(names(x) == "fit")])
-#     dat$param$modes <- modes
-#     
-#     
-#     # Initialization ----------------------------------------------------------
-#     
-#     ## Initialize persistent IDs
-#     if (control$use.pids == TRUE) {
-#       dat$nw <- EpiModel::init_pids(dat$nw, dat$control$pid.prefix)
-#     }
-#     
-#     ## Pull network val to attr
-#     form <- EpiModel::get_nwparam(dat)$formation
-#     
-#     #fterms <- get_formula_term_attr(form, nw)
-#     fterms <- setdiff(network::list.vertex.attributes(nw), c("active", "vertex.names", "na"))
-#     if(length(fterms) == 0) fterms <- NULL
-#     
-#     dat <- EpiModel::copy_toall_attr(dat, at = 1, fterms)
-#     
-#     ## Store current proportions of attr
-#     dat$temp$fterms <- fterms
-#     dat$temp$t1.tab <- EpiModel::get_attr_prop(dat$nw, fterms)
-#     
-#     
-#     ## Infection Status and Time Modules
-#     ##################################################################
-#     ##                       This is modified                       ##
-#     ##################################################################
-#     # dat <- init_status.net(dat)
-#     dat = custom.init_status.net(dat)
-#     ##################################################################
-#     ##                       This is modified                       ##
-#     ##################################################################
-#     
-#     ## Get initial prevalence
-#     dat <- custom.get_prev.net(dat, at = 1)
-#   } else {
-#     dat <- list()
-#     
-#     dat$nw <- x$network[[s]]
-#     dat$param <- x$param
-#     dat$control <- control
-#     dat$nwparam <- x$nwparam
-#     dat$epi <- sapply(x$epi, function(var) var[s])
-#     names(dat$epi) <- names(x$epi)
-#     dat$attr <- x$attr[[s]]
-#     dat$stats <- sapply(x$stats, function(var) var[[s]])
-#     dat$temp <- list()
-#   }
-#   
-#   return(dat)
-# }
-
-#' Modification of the EpiModel::init_status.net function
-#' 
-#' The performed modifications are clearly highlighted.
-#' 
-#' This function has been modified with the purpose of modifying how the times spent in each 
-#' state
-#' 
-#' INTERNAL PURPOSE MOSTLY
-#' @keywords internal
-#' 
-#' 
-custom.init_status.net <- function(dat) {
-  
-  type <- EpiModel::get_control(dat, "type", override.null.error = TRUE)
-  nsteps <- EpiModel::get_control(dat, "nsteps")
-  tergmLite <- EpiModel::get_control(dat, "tergmLite")
+  # Conditions --------------------------------------------------------------
   vital <- EpiModel::get_param(dat, "vital")
-  groups <- EpiModel::get_param(dat, "groups")
-  status.vector <- EpiModel::get_init(dat, "status.vector", override.null.error = TRUE)
-  if (type %in% c("SIS", "SIR") && !is.null(type)) {
-    rec.rate <- EpiModel::get_param(dat, "rec.rate")
-  }
-  if (vital == TRUE) {
-    di.rate <- EpiModel::get_param(dat, "di.rate")
+  if (vital == FALSE){
+    return(dat)
   }
   
-  # Variables ---------------------------------------------------------------
-  i.num <- EpiModel::get_init(dat, "i.num", override.null.error = TRUE)
-  if (type  == "SIR" && is.null(status.vector) && !is.null(type)) {
-    r.num <- EpiModel::get_init(dat, "r.num")
-  }
-  
-  num <- sum(EpiModel::get_attr(dat, "active") == 1)
-  
-  if (groups == 2) {
-    group <- EpiModel::get_attr(dat, "group")
-    i.num.g2 <- EpiModel::get_init(dat, "i.num.g2")
-    if (type  == "SIR" && is.null(status.vector) && !is.null(type)) {
-      r.num.g2 <- EpiModel::get_init(dat, "r.num.g2", override.null.error = TRUE)
-    }
-  } else {
-    group <- rep(1, num)
-  }
-  
-  statOnNw <- "status" %in% dat$temp$nwterms
-  
-  # Status ------------------------------------------------------------------
-  
-  ## Status passed on input network
-  if (statOnNw == FALSE) {
-    if (!is.null(status.vector)) {
-      status <- status.vector
-    } else {
-      status <- rep("s", num)
-      status[sample(which(group == 1), size = i.num)] <- "i"
-      if (groups == 2) {
-        status[sample(which(group == 2), size = i.num.g2)] <- "i"
-      }
-      if (type == "SIR"  && !is.null(type)) {
-        status[sample(which(group == 1 & status == "s"), size = r.num)] <- "r"
-        if (groups == 2) {
-          status[sample(which(group == 2 & status == "s"), size = r.num.g2)] <- "r"
-        }
-      }
-    }
-    dat <- EpiModel::set_attr(dat, "status", status)
-  } else {
-    status <- tergmLite::get_vertex_attribute(dat$nw[[1]], "status")
-    dat <- EpiModel::set_attr(dat, "status", status)
-  }
-  
-  
-  ## Set up TEA status
-  if (tergmLite == FALSE) {
-    if (statOnNw == FALSE) {
-      dat$nw[[1]] <- tergmLite::set_vertex_attribute(dat$nw[[1]], "status", status)
-    }
-    dat$nw[[1]] <- networkDynamic::activate.vertex.attribute(dat$nw[[1]],
-                                             prefix = "testatus",
-                                             value = status,
-                                             onset = 1,
-                                             terminus = Inf)
-  }
-  
-  
-  # Infection Time ----------------------------------------------------------
-  ## Set up inf.time vector
-  if (!is.null(type)) {
-    idsInf <- which(status == "i")
-    infTime <- rep(NA, length(status))
-    infTime.vector <- EpiModel::get_init(dat, "infTime.vector", override.null.error = TRUE)
-    
-    if (!is.null(infTime.vector)) {
-      infTime <- infTime.vector
-    } else {
-      # If vital dynamics, infTime is a geometric draw over the duration of infection
-      if (vital == TRUE && di.rate > 0) {
-        if (type == "SI") {
-          infTime[idsInf] <- -stats::rgeom(n = length(idsInf), prob = di.rate) + 2
-        } else {
-          infTime[idsInf] <- -stats::rgeom(n = length(idsInf),
-                                    prob = di.rate +
-                                      (1 - di.rate)*mean(rec.rate)) + 2
-        }
-      } else {
-        if (type == "SI" || mean(rec.rate) == 0) {
-          # if no recovery, infTime a uniform draw over the number of sim time steps
-          infTime[idsInf] <- EpiModel::ssample(1:(-nsteps + 2),
-                                     length(idsInf), replace = TRUE)
-        } else {
-          infTime[idsInf] <- -stats::rgeom(n = length(idsInf), prob = mean(rec.rate)) + 2
-        }
-      }
-    }
-    
-    dat <- EpiModel::set_attr(dat, "infTime", infTime)
-  } else {
-    infTime <- rep(NA, num)
-    idsInf <- idsInf <- which(status == "i")
-    infTime[idsInf] <- 1
-    dat <- EpiModel::set_attr(dat, "infTime", infTime)
-  }
-  
-  #################################################################
-  ##              This is my bit the rest is source              ##
-  #################################################################
-  # Infection Time ----------------------------------------------------------
-  ## Set up all time vectors
-  dat$attr$quarTime = rep(NA, length(status))
-  dat$attr$hospTime = rep(NA, length(status))
-  dat$attr$recTime = rep(NA, length(status))
-  dat$attr$dischTime = rep(NA, length(status))
-  dat$attr$fatTime = rep(NA, length(status))
-  dat$attr$expTime = rep(NA, length(status))
-  #################################################################
-  ##              This is my bit the rest is source              ##
-  #################################################################
-  
-  return(dat)
-}
-
-# custom.init_status.net <- function(dat) {
-# 
-# # Variables ---------------------------------------------------------------
-# tea.status <- dat$control$tea.status
-# i.num <- dat$init$i.num
-# i.num.m2 <- dat$init$i.num.m2
-# r.num <- dat$init$r.num
-# r.num.m2 <- dat$init$r.num.m2
-# 
-# status.vector <- dat$init$status.vector
-# num <- network::network.size(dat$nw)
-# statOnNw <- "status" %in% dat$temp$fterms
-# 
-# modes <- dat$param$modes
-# if (modes == 1) {
-#   mode <- rep(1, num)
-# } else {
-#   mode <- EpiModel::idmode(dat$nw)
-# }
-# 
-# type <- dat$control$type
-# 
-# 
-# # Status ------------------------------------------------------------------
-# 
-# ## Status passed on input network
-# if (statOnNw == TRUE) {
-#   status <- network::get.vertex.attribute(dat$nw, "status")
-# } else {
-#   if (!is.null(status.vector)) {
-#     status <- status.vector
-#   } else {
-#     status <- rep("s", num)
-#     status[sample(which(mode == 1), size = i.num)] <- "i"
-#     if (modes == 2) {
-#       status[sample(which(mode == 2), size = i.num.m2)] <- "i"
-#     }
-#     if (type == "SIR") {
-#       status[sample(which(mode == 1 & status == "s"), size = r.num)] <- "r"
-#       if (modes == 2) {
-#         status[sample(which(mode == 2 & status == "s"), size = r.num.m2)] <- "r"
-#       }
-#     }
-#   }
-# }
-# dat$attr$status <- status
-# 
-# 
-# ## Save out other attr
-# dat$attr$active <- rep(1, length(status))
-# dat$attr$entrTime <- rep(1, length(status))
-# dat$attr$exitTime <- rep(NA, length(status))
-# if (tea.status == TRUE) {
-#   dat$nw <- networkDynamic::activate.vertex.attribute(dat$nw,
-#                                       prefix = "testatus",
-#                                       value = status,
-#                                       onset = 1,
-#                                       terminus = Inf)
-# }
-# 
-# 
-# # Infection Time ----------------------------------------------------------
-# ## Set up inf.time vector
-# idsInf <- which(status == "i")
-# infTime <- rep(NA, length(status))
-# 
-# if (!is.null(dat$init$infTime.vector)) {
-#   infTime <- dat$init$infTime.vector
-# } else {
-#   # If vital dynamics, infTime is a geometric draw over the duration of infection
-#   if (dat$param$vital == TRUE && dat$param$di.rate > 0) {
-#     if (dat$control$type == "SI") {
-#       infTime[idsInf] <- -rgeom(n = length(idsInf), prob = dat$param$di.rate) + 2
-#     } else {
-#       infTime[idsInf] <- -rgeom(n = length(idsInf),
-#                                 prob = dat$param$di.rate +
-#                                   (1 - dat$param$di.rate)*mean(dat$param$rec.rate)) + 2
-#     }
-#   } else {
-#     if (dat$control$type == "SI" || mean(dat$param$rec.rate) == 0) {
-#       # if no recovery, infTime a uniform draw over the number of sim time steps
-#       infTime[idsInf] <- EpiModel::ssample(1:(-dat$control$nsteps + 2),
-#                                  length(idsInf), replace = TRUE)
-#     } else {
-#       infTime[idsInf] <- -rgeom(n = length(idsInf), prob = mean(dat$param$rec.rate)) + 2
-#     }
-#   }
-# }
-# 
-# #################################################################
-# ##              This is my bit the rest is source              ##
-# #################################################################
-# # Infection Time ----------------------------------------------------------
-# ## Set up all time vectors
-# dat$attr$quarTime = rep(NA, length(status))
-# dat$attr$hospTime = rep(NA, length(status))
-# dat$attr$recTime = rep(NA, length(status))
-# dat$attr$dischTime = rep(NA, length(status))
-# dat$attr$fatTime = rep(NA, length(status))
-# dat$attr$expTime = rep(NA, length(status))
-# #################################################################
-# ##              This is my bit the rest is source              ##
-# #################################################################
-# 
-# dat$attr$infTime <- infTime
-# 
-# return(dat)
-# }
-
-#' Modification of the EpiModel::get_prev.net function
-#' 
-#' The performed modifications are clearly highlighted.
-#' 
-#' This function has been modified with to be able to store the different number 
-#' by vertex attribute (as per epi.by)
-#' 
-#' INTERNAL PURPOSE MOSTLY
-#' @keywords internal
-#' 
-
-custom.get_prev.net <- function(dat, at) {
-  
-  active <- EpiModel::get_attr(dat, "active")
   type <- EpiModel::get_control(dat, "type")
-  groups <- EpiModel::get_param(dat, "groups")
+  active <- EpiModel::get_attr(dat, "active")
+  status <- EpiModel::get_attr(dat, "status")
+  exitTime <- EpiModel::get_attr(dat, "exitTime")
+  rates.sus <- EpiModel::get_param(dat, "ds.rate")
+  rates.inf <- EpiModel::get_param(dat, "di.rate")
   
-  # Subset attr to active == 1
-  l <- lapply(1:length(dat$attr), function(x) dat$attr[[x]][active == 1])
-  names(l) <- names(dat$attr)
-  l$active <- l$infTime <- NULL
   
-  status <- l$status
+  rates.rec <- EpiModel::get_param(dat, "dr.rate")
   
-  ## Subsetting for epi.by control
-  eb <- !is.null(dat$control$epi.by)
-  if (eb == TRUE) {
-    ebn <- EpiModel::get_control(dat, "epi.by")
-    ebv <- dat$temp$epi.by.vals
-    ebun <- paste0(".", ebn, ebv)
-    assign(ebn, l[[ebn]])
+  
+  # Susceptible departures ------------------------------------------------------
+  nDepartures.sus <- 0
+  idsElig.sus <- which(active == 1 & status == "s")
+  nElig.sus <- length(idsElig.sus)
+  if (nElig.sus > 0) {
+    vecDepartures.sus <- which(stats::rbinom(nElig.sus, 1, rates.sus) == 1)
+    if (length(vecDepartures.sus) > 0) {
+      idsDpt.sus <- idsElig.sus[vecDepartures.sus]
+      nDepartures.sus <- length(idsDpt.sus)
+      active[idsDpt.sus] <- 0
+      exitTime[idsDpt.sus] <- at
+    }
   }
   
-  if (at == 1) {
-    dat$epi <- list()
+  # Infected departures ---------------------------------------------------------
+  nDepartures.inf <- 0
+  idsElig.inf <- which(active == 1 & status == "i")
+  nElig.inf <- length(idsElig.inf)
+  if (nElig.inf > 0) {
+    vecDepartures.inf <- which(stats::rbinom(nElig.inf, 1, rates.inf) == 1)
+    if (length(vecDepartures.inf) > 0) {
+      idsDpt.inf <- idsElig.inf[vecDepartures.inf]
+      nDepartures.inf <- length(idsDpt.inf)
+      active[idsDpt.inf] <- 0
+      exitTime[idsDpt.inf] <- at
+    }
   }
   
-  if (groups == 1) {
-    
-    dat <- EpiModel::set_epi(dat, "s.num", at, sum(status == "s"))
-    if (eb == TRUE) {
-      for (i in 1:length(ebun)) {
-        ebn.temp <- paste0("s.num", ebun[i])
-        dat <- EpiModel::set_epi(dat, ebn.temp, at, sum(status == "s" &
-                                                get(ebn) == ebv[i]))
-      }
+  # Recovered departures --------------------------------------------------------
+  nDepartures.rec <- 0
+  idsElig.rec <- which(active == 1 & status == "r")
+  nElig.rec <- length(idsElig.rec)
+  if (nElig.rec > 0) {
+    vecDepartures.rec <- which(stats::rbinom(nElig.rec, 1, rates.rec) == 1)
+    if (length(vecDepartures.rec) > 0) {
+      idsDpt.rec <- idsElig.rec[vecDepartures.rec]
+      nDepartures.rec <- length(idsDpt.rec)
+      active[idsDpt.rec] <- 0
+      exitTime[idsDpt.rec] <- at
     }
-    
-    dat <- EpiModel::set_epi(dat, "i.num", at, sum(status == "i"))
-    if (eb == TRUE) {
-      for (i in 1:length(ebun)) {
-        ebn.temp <- paste0("i.num", ebun[i])
-        dat <- EpiModel::set_epi(dat, ebn.temp, at, sum(status == "i" &
-                                                get(ebn) == ebv[i]))
-      }
-    }
-    
-    if (!is.null(type)) {
-      if (type == "SIR") {
-        dat <- EpiModel::set_epi(dat, "r.num", at, sum(status == "r"))
-        if (eb == TRUE) {
-          for (i in 1:length(ebun)) {
-            ebn.temp <- paste0("r.num", ebun[i])
-            dat <- EpiModel::set_epi(dat, ebn.temp, at, sum(status == "r" &
-                                                    get(ebn) == ebv[i]))
-          }
-        }
-      }
-    }
-    dat <- EpiModel::set_epi(dat, "num", at, length(status))
-    if (eb == TRUE) {
-      for (i in 1:length(ebun)) {
-        ebn.temp <- paste0("num", ebun[i])
-        dat <- EpiModel::set_epi(dat, ebn.temp, at, sum(get(ebn) == ebv[i]))
-      }
-    }
-    
-    #################################################################
-    ##                           my code                           ##
-    #################################################################
-    
-    dat$epi$h.num <- sum(status == "h")
-    if (eb == TRUE) {
-      for (i in 1:length(ebun)) {
-        dat$epi[[paste0("h.num", ebun[i])]] <- sum(status == "h" &
-                                                     get(ebn) == ebv[i])
-      }
-    }
-    dat$epi$q.num <- sum(status == "q")
-    if (eb == TRUE) {
-      for (i in 1:length(ebun)) {
-        dat$epi[[paste0("q.num", ebun[i])]] <- sum(status == "q" &
-                                                     get(ebn) == ebv[i])
-      }
-    }
-    dat$epi$f.num <- sum(status == "f")
-    if (eb == TRUE) {
-      for (i in 1:length(ebun)) {
-        dat$epi[[paste0("f.num", ebun[i])]] <- sum(status == "f" &
-                                                     get(ebn) == ebv[i])
-      }
-    }
-    dat$epi$r.num <- sum(status == "r")
-    if (eb == TRUE) {
-      for (i in 1:length(ebun)) {
-        dat$epi[[paste0("r.num", ebun[i])]] <- sum(status == "r" &
-                                                     get(ebn) == ebv[i])
-      }
-    }
-    
-    dat$epi$e.num <- sum(status == "e")
-    if (eb == TRUE) {
-      for (i in 1:length(ebun)) {
-        dat$epi[[paste0("e.num", ebun[i])]] <- sum(status == "e" &
-                                                     get(ebn) == ebv[i])
-      }
-    }
-    
-    
-    #################################################################
-    ##                           my code                           ##
-    #################################################################
-    
-    
-  } else {
-    stop("Bipartite networks not currently supported in this custom function")
   }
+  
+  
+  # Output ------------------------------------------------------------------
+  
+  dat <- EpiModel::set_attr(dat, "active", active)
+  dat <- EpiModel::set_attr(dat, "exitTime", exitTime)
+  
+  dat <- EpiModel::set_epi(dat, "ds.flow", at, nDepartures.sus)
+  dat <- EpiModel::set_epi(dat, "di.flow", at, nDepartures.inf)
+  dat <- EpiModel::set_epi(dat, "dr.flow", at, nDepartures.rec)
   return(dat)
 }
-
-# custom.get_prev.net <- function(dat, at) {
-#   
-#   active <- dat$attr$active
-#   modes <- dat$param$modes
-#   
-#   #################################################################
-#   ##                        my commenting                        ##
-#   #################################################################
-#   # Subset attr to active == 1
-#   l <- lapply(1:length(dat$attr), function(x) dat$attr[[x]][active == 1 | active == 0])
-#   names(l) <- names(dat$attr)
-#   l$active <- l$infTime <- NULL
-#   #################################################################
-#   ##                        my commenting                        ##
-#   #################################################################
-#   
-#   status <- l$status
-#   
-#   if (modes == 2) {
-#     mode <- EpiModel::idmode(dat$nw)[active == 1]
-#   }
-#   
-#   ## Subsetting for epi.by control
-#   eb <- !is.null(dat$control$epi.by)
-#   if (eb == TRUE) {
-#     ebn <- dat$control$epi.by
-#     ebv <- dat$temp$epi.by.vals
-#     ebun <- paste0(".", ebn, ebv)
-#     assign(ebn, l[[ebn]])
-#   }
-#   
-#   ## One mode networks
-#   if (modes == 1) {
-#     if (at == 1) {
-#       dat$epi <- list()
-#       dat$epi$s.num <- sum(status == "s")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("s.num", ebun[i])]] <- sum(status == "s" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       dat$epi$i.num <- sum(status == "i")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("i.num", ebun[i])]] <- sum(status == "i" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       #################################################################
-#       ##                           my code                           ##
-#       #################################################################
-#       
-#       dat$epi$h.num <- sum(status == "h")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("h.num", ebun[i])]] <- sum(status == "h" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       dat$epi$q.num <- sum(status == "q")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("q.num", ebun[i])]] <- sum(status == "q" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       dat$epi$f.num <- sum(status == "f")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("f.num", ebun[i])]] <- sum(status == "f" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       dat$epi$r.num <- sum(status == "r")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("r.num", ebun[i])]] <- sum(status == "r" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       
-#       dat$epi$e.num <- sum(status == "e")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("e.num", ebun[i])]] <- sum(status == "e" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       
-#       
-#       #################################################################
-#       ##                           my code                           ##
-#       #################################################################
-#       
-#       if (dat$control$type == "SIR") {
-#         dat$epi$r.num <- sum(status == "r")
-#         if (eb == TRUE) {
-#           for (i in 1:length(ebun)) {
-#             dat$epi[[paste0("r.num", ebun[i])]] <- sum(status == "r" &
-#                                                          get(ebn) == ebv[i])
-#           }
-#         }
-#       }
-#       ## CHANGE 
-#       # dat$epi$num[at] <- length(status)
-#       dat$epi$num <- sum(active == 1)
-#       ## CHANGE
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("num", ebun[i])]] <- sum(get(ebn) == ebv[i] &
-#                                                      active == 1) # I added the active == 1
-#         }
-#       }
-#     } else {
-#       # at > 1
-#       dat$epi$s.num[at] <- sum(status == "s")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("s.num", ebun[i])]][at] <- sum(status == "s" &
-#                                                            get(ebn) == ebv[i])
-#         }
-#       }
-#       dat$epi$i.num[at] <- sum(status == "i")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("i.num", ebun[i])]][at] <- sum(status == "i" &
-#                                                            get(ebn) == ebv[i])
-#         }
-#       }
-#       
-#       #################################################################
-#       ##                           my code                           ##
-#       #################################################################
-#       
-#       dat$epi$h.num[at] <- sum(status == "h")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("h.num", ebun[i])]][at] <- sum(status == "h" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       dat$epi$q.num[at] <- sum(status == "q")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("q.num", ebun[i])]][at] <- sum(status == "q" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       # there is a bug here, this line below is overwriting the actual number of fatalities
-#       # as the deactivated vertices are being removed hence their status is deleted
-#       ## - Fixed by not filtering out inactive nodes at the top oof this function
-#       dat$epi$f.num[at] <- sum(status == "f")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("f.num", ebun[i])]][at] <- sum(status == "f" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       dat$epi$r.num[at] <- sum(status == "r")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("r.num", ebun[i])]][at] <- sum(status == "r" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       
-#       dat$epi$e.num[at] <- sum(status == "e")
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("e.num", ebun[i])]][at] <- sum(status == "e" &
-#                                                        get(ebn) == ebv[i])
-#         }
-#       }
-#       
-#       
-#       #################################################################
-#       ##                           my code                           ##
-#       #################################################################
-#       
-#       if (dat$control$type == "SIR") {
-#         dat$epi$r.num[at] <- sum(status == "r")
-#         if (eb == TRUE) {
-#           for (i in 1:length(ebun)) {
-#             dat$epi[[paste0("r.num", ebun[i])]][at] <- sum(status == "r" &
-#                                                              get(ebn) == ebv[i])
-#           }
-#         }
-#       }
-#       
-#       ## CHANGE 
-#       # dat$epi$num[at] <- length(status)
-#       dat$epi$num[at] <- sum(active == 1)
-#       ## CHANGE
-#       if (eb == TRUE) {
-#         for (i in 1:length(ebun)) {
-#           dat$epi[[paste0("num", ebun[i])]][at] <- sum(get(ebn) == ebv[i] &
-#                                                          active == 1) # I added the active = 1
-#         }
-#       }
-#     }
-#     
-#   } else {
-#     stop("Bipartite networks not currently supported in this custom function")
-#   }
-#   
-#   return(dat)
-# }
 
 
