@@ -1,10 +1,24 @@
 language: r
+sudo: false
+cache: packages
+latex: false
 
-before_install:
- if [ $TRAVIS_OS_NAME = linux ]; then sudo apt-get install libmagick++-dev; else brew install bar; fi
+r:
+  - release
+  - devel
+
+r_packages:
+  - nlme
+
+addons:
+  apt:
+    packages:
+      - libmagick++-dev
+
+warnings_are_errors: true
+
 os:
   - linux
   - osx
   - windows
 pandoc: false
-latex: false
