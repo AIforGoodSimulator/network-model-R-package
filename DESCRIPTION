@@ -20,7 +20,7 @@ Imports:
     plotly,
     animation,
     dplyr,
-    EpiModel,
+    EpiModel(>= 2.0),
     ggplot2,
     intergraph,
     igraph,
