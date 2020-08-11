@@ -12,3 +12,7 @@ plot_states(net_build_object)
 \description{
 Plot epidemic curves for each state
 }
+\examples{
+data(net_example)
+plot_states(net_example)
+}

@@ -2,9 +2,9 @@
 #' 
 #' @param net_build_object objected returned by `net_simulate`
 #' 
-#' @example 
+#' @examples
 #' data(net_example)
-#' plot_state(net_example)
+#' plot_states(net_example)
 #' @export
 plot_states = function(net_build_object){
   res = as.data.frame(net_build_object$network_simulation_object)
