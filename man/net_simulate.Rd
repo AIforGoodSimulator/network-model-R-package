@@ -7,6 +7,7 @@
 net_simulate(
   n = 100,
   nsims = 3,
+  nsims_dx = 100,
   nsteps = 90,
   prop.isobox = 0.43,
   iso.capacity = 10,
@@ -50,7 +51,9 @@ net_simulate(
 \arguments{
 \item{n}{numbers of individuals, a random sample of this size will be taken from the Camp's population}
 
-\item{nsims}{number of network simulations}
+\item{nsims}{number of network simulations (default: 3) ~ simulation sample size}
+
+\item{nsims_dx}{number of network simulation for network diagnostics (default: 100)}
 
 \item{nsteps}{number of timesteps (days, hours, weeks, arbitrary choice), the rates need to be defined in units
 relative to this metric (e.g number of cases/day or /hour or /week)}
