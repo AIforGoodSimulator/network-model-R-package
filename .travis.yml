@@ -1,13 +1,13 @@
 language: r
-sudo: false
+root: false
 cache: packages
 latex: false
 
 r:
   - release
 
-r_packages:
-  - nlme
+compiler:
+  - gcc
 
 addons:
   apt:
