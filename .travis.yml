@@ -6,9 +6,6 @@ latex: false
 r:
   - release
 
-compiler:
-  - gcc
-
 addons:
   apt:
     packages:
