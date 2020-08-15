@@ -1,10 +1,13 @@
 language: r
-root: false
+sudo: false
 cache: packages
 latex: false
 
 r:
   - release
+
+r_packages:
+  - nlme
 
 addons:
   apt:
