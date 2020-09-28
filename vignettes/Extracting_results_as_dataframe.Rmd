@@ -28,7 +28,7 @@ Next is the __network_diagnostics__ object, which registers the output from the 
 Finally, we have the __network_simulation__ object, which holds information regarding the epidemic parameters (infection rate, recovery rate...), the simulation configuration (number of simulations, number of timesteps...) and the model output (number of infected, recovered, susceptible people at each timestep in each simulation...). This is the main object end-user will be exposed to and is the one that contains the simulation results. These results can easily be accessed as a dataframe by running:
 
 ```{r}
-results_df = as.data.frame(net_example)
+results_df = as.data.frame(net_example$network_simulation)
 head(results_df)
 ```
 _Note:_ `net_example` is the output of the default `net_simulate()` run.

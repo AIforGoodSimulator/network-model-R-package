@@ -30,4 +30,9 @@ Imports:
     foreach,
     doParallel,
     magrittr,
-    tergmLite
+    tergmLite,
+    rlang
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr

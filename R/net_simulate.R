@@ -200,7 +200,9 @@ net_simulate = function(
   nw = network::set.vertex.attribute(nw, "housing", housing)
   # age
   nw = network::set.vertex.attribute(nw, "age",
-                                     sample(as.vector(agedistribution),n))
+                                     sample(as.vector(agedistribution),
+                                            n,
+                                            replace = TRUE))
   
   # Setting network formation dynamics ####
   formation = ~edges + 
@@ -327,7 +329,7 @@ net_simulate = function(
   sim = custom.netsim(est, param, init, control)
   
   cat(Sys.time()-t0) # roughly 30 minutes for n = 1000 and nsteps = 60
-  log_build$network_simulation_object = sim
+  log_build$network_simulation = sim
   # res = as.data.frame(sim)
   
   return(log_build)

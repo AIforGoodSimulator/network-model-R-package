@@ -4,3 +4,6 @@
 ^\.Rproj\.user$
 ^LICENSE\.md$
 ^\.travis\.yml$
+^doc$
+
+^vignettes/Performance_test\.Rmd$

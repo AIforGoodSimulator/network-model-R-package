@@ -4,12 +4,15 @@
 \alias{network.heatmap.GIF}
 \title{Get network heatmap at all timesteps as a GIF}
 \usage{
-network.heatmap.GIF(net_build_object, interval = NULL)
+network.heatmap.GIF(net_build_object, interval = NULL, save = FALSE)
 }
 \arguments{
 \item{net_build_object}{objected returned by \code{net_simulate}}
 
 \item{interval}{interval of timesteps to produce GIF in}
+
+\item{save}{TRUE/FALSE whether or not to save the GIF, if TRUE the GIF will be saved as
+network.gif in the current working directory.}
 }
 \description{
 Get network heatmap at all timesteps as a GIF
