@@ -11,6 +11,7 @@ r_packages:
 
 # to avoid building vignettes which takes too long
 r_check_args: "--no-build-vignettes --ignore-vignettes"
+r_build_args: "--no-build-vignettes --ignore-vignettes"
 
 addons:
   apt:
