@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+
+<html>
+
+<head>
+
+<meta charset="utf-8" />
+<meta name="generator" content="pandoc" />
+<meta http-equiv="X-UA-Compatible" content="IE=EDGE" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+
+
+<title>Extracting_results_as_dataframe</title>
+
+<script>// Hide empty <a> tag within highlighted CodeBlock for screen reader accessibility (see https://github.com/jgm/pandoc/issues/6352#issuecomment-626106786) -->
+// v0.0.1
+// Written by JooYoung Seo (jooyoung@psu.edu) and Atsushi Yasumoto on June 1st, 2020.
+
+document.addEventListener('DOMContentLoaded', function() {
+  const codeList = document.getElementsByClassName("sourceCode");
+  for (var i = 0; i < codeList.length; i++) {
+    var linkList = codeList[i].getElementsByTagName('a');
+    for (var j = 0; j < linkList.length; j++) {
+      if (linkList[j].innerHTML === "") {
+        linkList[j].setAttribute('aria-hidden', 'true');
+      }
+    }
+  }
+});
+</script>
+
+
+<style type="text/css">code{white-space: pre;}</style>
+<style type="text/css" data-origin="pandoc">
+code.sourceCode > span { display: inline-block; line-height: 1.25; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode { white-space: pre; position: relative; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+code.sourceCode { white-space: pre-wrap; }
+code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+
+</style>
+<script>
+// apply pandoc div.sourceCode style to pre.sourceCode instead
+(function() {
+  var sheets = document.styleSheets;
+  for (var i = 0; i < sheets.length; i++) {
+    if (sheets[i].ownerNode.dataset["origin"] !== "pandoc") continue;
+    try { var rules = sheets[i].cssRules; } catch (e) { continue; }
+    for (var j = 0; j < rules.length; j++) {
+      var rule = rules[j];
+      // check if there is a div.sourceCode rule
+      if (rule.type !== rule.STYLE_RULE || rule.selectorText !== "div.sourceCode") continue;
+      var style = rule.style.cssText;
+      // check if color or background-color is set
+      if (rule.style.color === '' && rule.style.backgroundColor === '') continue;
+      // replace div.sourceCode by a pre.sourceCode rule
+      sheets[i].deleteRule(j);
+      sheets[i].insertRule('pre.sourceCode{' + style + '}', j);
+    }
+  }
+})();
+</script>
+
+
+
+<style type="text/css">body {
+background-color: #fff;
+margin: 1em auto;
+max-width: 700px;
+overflow: visible;
+padding-left: 2em;
+padding-right: 2em;
+font-family: "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+font-size: 14px;
+line-height: 1.35;
+}
+#TOC {
+clear: both;
+margin: 0 0 10px 10px;
+padding: 4px;
+width: 400px;
+border: 1px solid #CCCCCC;
+border-radius: 5px;
+background-color: #f6f6f6;
+font-size: 13px;
+line-height: 1.3;
+}
+#TOC .toctitle {
+font-weight: bold;
+font-size: 15px;
+margin-left: 5px;
+}
+#TOC ul {
+padding-left: 40px;
+margin-left: -1.5em;
+margin-top: 5px;
+margin-bottom: 5px;
+}
+#TOC ul ul {
+margin-left: -2em;
+}
+#TOC li {
+line-height: 16px;
+}
+table {
+margin: 1em auto;
+border-width: 1px;
+border-color: #DDDDDD;
+border-style: outset;
+border-collapse: collapse;
+}
+table th {
+border-width: 2px;
+padding: 5px;
+border-style: inset;
+}
+table td {
+border-width: 1px;
+border-style: inset;
+line-height: 18px;
+padding: 5px 5px;
+}
+table, table th, table td {
+border-left-style: none;
+border-right-style: none;
+}
+table thead, table tr.even {
+background-color: #f7f7f7;
+}
+p {
+margin: 0.5em 0;
+}
+blockquote {
+background-color: #f6f6f6;
+padding: 0.25em 0.75em;
+}
+hr {
+border-style: solid;
+border: none;
+border-top: 1px solid #777;
+margin: 28px 0;
+}
+dl {
+margin-left: 0;
+}
+dl dd {
+margin-bottom: 13px;
+margin-left: 13px;
+}
+dl dt {
+font-weight: bold;
+}
+ul {
+margin-top: 0;
+}
+ul li {
+list-style: circle outside;
+}
+ul ul {
+margin-bottom: 0;
+}
+pre, code {
+background-color: #f7f7f7;
+border-radius: 3px;
+color: #333;
+white-space: pre-wrap; 
+}
+pre {
+border-radius: 3px;
+margin: 5px 0px 10px 0px;
+padding: 10px;
+}
+pre:not([class]) {
+background-color: #f7f7f7;
+}
+code {
+font-family: Consolas, Monaco, 'Courier New', monospace;
+font-size: 85%;
+}
+p > code, li > code {
+padding: 2px 0px;
+}
+div.figure {
+text-align: center;
+}
+img {
+background-color: #FFFFFF;
+padding: 2px;
+border: 1px solid #DDDDDD;
+border-radius: 3px;
+border: 1px solid #CCCCCC;
+margin: 0 5px;
+}
+h1 {
+margin-top: 0;
+font-size: 35px;
+line-height: 40px;
+}
+h2 {
+border-bottom: 4px solid #f7f7f7;
+padding-top: 10px;
+padding-bottom: 2px;
+font-size: 145%;
+}
+h3 {
+border-bottom: 2px solid #f7f7f7;
+padding-top: 10px;
+font-size: 120%;
+}
+h4 {
+border-bottom: 1px solid #f7f7f7;
+margin-left: 8px;
+font-size: 105%;
+}
+h5, h6 {
+border-bottom: 1px solid #ccc;
+font-size: 105%;
+}
+a {
+color: #0033dd;
+text-decoration: none;
+}
+a:hover {
+color: #6666ff; }
+a:visited {
+color: #800080; }
+a:visited:hover {
+color: #BB00BB; }
+a[href^="http:"] {
+text-decoration: underline; }
+a[href^="https:"] {
+text-decoration: underline; }
+
+code > span.kw { color: #555; font-weight: bold; } 
+code > span.dt { color: #902000; } 
+code > span.dv { color: #40a070; } 
+code > span.bn { color: #d14; } 
+code > span.fl { color: #d14; } 
+code > span.ch { color: #d14; } 
+code > span.st { color: #d14; } 
+code > span.co { color: #888888; font-style: italic; } 
+code > span.ot { color: #007020; } 
+code > span.al { color: #ff0000; font-weight: bold; } 
+code > span.fu { color: #900; font-weight: bold; } 
+code > span.er { color: #a61717; background-color: #e3d2d2; } 
+</style>
+
+
+
+
+</head>
+
+<body>
+
+
+
+
+<h1 class="title toc-ignore">Extracting_results_as_dataframe</h1>
+
+
+
+<div class="sourceCode" id="cb1"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1"></a><span class="kw">library</span>(CampNetworkSimulator)</span></code></pre></div>
+<p>The output is the <code>net_simulate()</code> function is made of four elements. First it contains a log string which contains all warnings or messages that were created through out the different steps of the simulation. Next it contains <strong>network_estimation</strong>, this object results from the output of the Epimodel’s <code>netest()</code> function. From EpiModel’s documentation (see <code>?EpiModel::netest</code>) &gt; Network model estimation is the first step in simulating a stochastic network epidemic model in EpiModel. The output from netest is a necessary input for running the epidemic simulations in netsim.</p>
+<p>This object should not be necessary for the end-user but it is there in case the user needs it.</p>
+<p>Next is the <strong>network_diagnostics</strong> object, which registers the output from the EpiModel <code>netdx()</code> function. This function allows to check the goodness-of-fit (GOF) of the network estimation. In practice this allows the user to know whether the specific network specifications have been matched (e.g. number of connection between males and females in a given network)</p>
+<p>Finally, we have the <strong>network_simulation</strong> object, which holds information regarding the epidemic parameters (infection rate, recovery rate…), the simulation configuration (number of simulations, number of timesteps…) and the model output (number of infected, recovered, susceptible people at each timestep in each simulation…). This is the main object end-user will be exposed to and is the one that contains the simulation results. These results can easily be accessed as a dataframe by running:</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1"></a>results_df =<span class="st"> </span><span class="kw">as.data.frame</span>(net_example<span class="op">$</span>network_simulation)</span>
+<span id="cb2-2"><a href="#cb2-2"></a><span class="kw">head</span>(results_df)</span>
+<span id="cb2-3"><a href="#cb2-3"></a><span class="co">#&gt;   sim time s.num s.num.age(0,10] s.num.age(20,30] s.num.age(10,20]</span></span>
+<span id="cb2-4"><a href="#cb2-4"></a><span class="co">#&gt; 1   1    1    99              10               31               15</span></span>
+<span id="cb2-5"><a href="#cb2-5"></a><span class="co">#&gt; 2   1    2    94               9               29               13</span></span>
+<span id="cb2-6"><a href="#cb2-6"></a><span class="co">#&gt; 3   1    3    81               7               27               11</span></span>
+<span id="cb2-7"><a href="#cb2-7"></a><span class="co">#&gt; 4   1    4    52               6               19                5</span></span>
+<span id="cb2-8"><a href="#cb2-8"></a><span class="co">#&gt; 5   1    5    14               0                8                2</span></span>
+<span id="cb2-9"><a href="#cb2-9"></a><span class="co">#&gt; 6   1    6     1               0                0                1</span></span>
+<span id="cb2-10"><a href="#cb2-10"></a><span class="co">#&gt;   s.num.age(50,60] s.num.age(30,40] s.num.age(40,50] s.num.age(60,70] i.num</span></span>
+<span id="cb2-11"><a href="#cb2-11"></a><span class="co">#&gt; 1                7               20               15                1     0</span></span>
+<span id="cb2-12"><a href="#cb2-12"></a><span class="co">#&gt; 2                7               20               15                1     1</span></span>
+<span id="cb2-13"><a href="#cb2-13"></a><span class="co">#&gt; 3                7               15               13                1     3</span></span>
+<span id="cb2-14"><a href="#cb2-14"></a><span class="co">#&gt; 4                3                9                9                1    12</span></span>
+<span id="cb2-15"><a href="#cb2-15"></a><span class="co">#&gt; 5                1                2                0                1    15</span></span>
+<span id="cb2-16"><a href="#cb2-16"></a><span class="co">#&gt; 6                0                0                0                0    17</span></span>
+<span id="cb2-17"><a href="#cb2-17"></a><span class="co">#&gt;   i.num.age(0,10] i.num.age(20,30] i.num.age(10,20] i.num.age(50,60]</span></span>
+<span id="cb2-18"><a href="#cb2-18"></a><span class="co">#&gt; 1               0                0                0                0</span></span>
+<span id="cb2-19"><a href="#cb2-19"></a><span class="co">#&gt; 2               0                0                0                0</span></span>
+<span id="cb2-20"><a href="#cb2-20"></a><span class="co">#&gt; 3               0                1                1                0</span></span>
+<span id="cb2-21"><a href="#cb2-21"></a><span class="co">#&gt; 4               1                4                3                0</span></span>
+<span id="cb2-22"><a href="#cb2-22"></a><span class="co">#&gt; 5               2                4                3                1</span></span>
+<span id="cb2-23"><a href="#cb2-23"></a><span class="co">#&gt; 6               3                3                4                0</span></span>
+<span id="cb2-24"><a href="#cb2-24"></a><span class="co">#&gt;   i.num.age(30,40] i.num.age(40,50] i.num.age(60,70] num num.age(0,10]</span></span>
+<span id="cb2-25"><a href="#cb2-25"></a><span class="co">#&gt; 1                1                0                0 100            10</span></span>
+<span id="cb2-26"><a href="#cb2-26"></a><span class="co">#&gt; 2                1                0                0 100            10</span></span>
+<span id="cb2-27"><a href="#cb2-27"></a><span class="co">#&gt; 3                1                0                0 100            10</span></span>
+<span id="cb2-28"><a href="#cb2-28"></a><span class="co">#&gt; 4                2                2                0 100            10</span></span>
+<span id="cb2-29"><a href="#cb2-29"></a><span class="co">#&gt; 5                3                2                0 100            10</span></span>
+<span id="cb2-30"><a href="#cb2-30"></a><span class="co">#&gt; 6                3                4                0 100            10</span></span>
+<span id="cb2-31"><a href="#cb2-31"></a><span class="co">#&gt;   num.age(20,30] num.age(10,20] num.age(50,60] num.age(30,40] num.age(40,50]</span></span>
+<span id="cb2-32"><a href="#cb2-32"></a><span class="co">#&gt; 1             31             15              7             21             15</span></span>
+<span id="cb2-33"><a href="#cb2-33"></a><span class="co">#&gt; 2             31             15              7             21             15</span></span>
+<span id="cb2-34"><a href="#cb2-34"></a><span class="co">#&gt; 3             31             15              7             21             15</span></span>
+<span id="cb2-35"><a href="#cb2-35"></a><span class="co">#&gt; 4             31             15              7             21             15</span></span>
+<span id="cb2-36"><a href="#cb2-36"></a><span class="co">#&gt; 5             31             15              7             21             15</span></span>
+<span id="cb2-37"><a href="#cb2-37"></a><span class="co">#&gt; 6             31             15              7             21             15</span></span>
+<span id="cb2-38"><a href="#cb2-38"></a><span class="co">#&gt;   num.age(60,70] h.num h.num.age(0,10] h.num.age(20,30] h.num.age(10,20]</span></span>
+<span id="cb2-39"><a href="#cb2-39"></a><span class="co">#&gt; 1              1     0               0                0                0</span></span>
+<span id="cb2-40"><a href="#cb2-40"></a><span class="co">#&gt; 2              1     0               0                0                0</span></span>
+<span id="cb2-41"><a href="#cb2-41"></a><span class="co">#&gt; 3              1     0               0                0                0</span></span>
+<span id="cb2-42"><a href="#cb2-42"></a><span class="co">#&gt; 4              1     0               0                0                0</span></span>
+<span id="cb2-43"><a href="#cb2-43"></a><span class="co">#&gt; 5              1     0               0                0                0</span></span>
+<span id="cb2-44"><a href="#cb2-44"></a><span class="co">#&gt; 6              1     2               0                0                0</span></span>
+<span id="cb2-45"><a href="#cb2-45"></a><span class="co">#&gt;   h.num.age(50,60] h.num.age(30,40] h.num.age(40,50] h.num.age(60,70] q.num</span></span>
+<span id="cb2-46"><a href="#cb2-46"></a><span class="co">#&gt; 1                0                0                0                0     0</span></span>
+<span id="cb2-47"><a href="#cb2-47"></a><span class="co">#&gt; 2                0                0                0                0     0</span></span>
+<span id="cb2-48"><a href="#cb2-48"></a><span class="co">#&gt; 3                0                0                0                0     0</span></span>
+<span id="cb2-49"><a href="#cb2-49"></a><span class="co">#&gt; 4                0                0                0                0     2</span></span>
+<span id="cb2-50"><a href="#cb2-50"></a><span class="co">#&gt; 5                0                0                0                0     2</span></span>
+<span id="cb2-51"><a href="#cb2-51"></a><span class="co">#&gt; 6                1                0                1                0     2</span></span>
+<span id="cb2-52"><a href="#cb2-52"></a><span class="co">#&gt;   q.num.age(0,10] q.num.age(20,30] q.num.age(10,20] q.num.age(50,60]</span></span>
+<span id="cb2-53"><a href="#cb2-53"></a><span class="co">#&gt; 1               0                0                0                0</span></span>
+<span id="cb2-54"><a href="#cb2-54"></a><span class="co">#&gt; 2               0                0                0                0</span></span>
+<span id="cb2-55"><a href="#cb2-55"></a><span class="co">#&gt; 3               0                0                0                0</span></span>
+<span id="cb2-56"><a href="#cb2-56"></a><span class="co">#&gt; 4               1                1                0                0</span></span>
+<span id="cb2-57"><a href="#cb2-57"></a><span class="co">#&gt; 5               1                1                0                0</span></span>
+<span id="cb2-58"><a href="#cb2-58"></a><span class="co">#&gt; 6               0                2                0                0</span></span>
+<span id="cb2-59"><a href="#cb2-59"></a><span class="co">#&gt;   q.num.age(30,40] q.num.age(40,50] q.num.age(60,70] f.num f.num.age(0,10]</span></span>
+<span id="cb2-60"><a href="#cb2-60"></a><span class="co">#&gt; 1                0                0                0     0               0</span></span>
+<span id="cb2-61"><a href="#cb2-61"></a><span class="co">#&gt; 2                0                0                0     0               0</span></span>
+<span id="cb2-62"><a href="#cb2-62"></a><span class="co">#&gt; 3                0                0                0     0               0</span></span>
+<span id="cb2-63"><a href="#cb2-63"></a><span class="co">#&gt; 4                0                0                0     0               0</span></span>
+<span id="cb2-64"><a href="#cb2-64"></a><span class="co">#&gt; 5                0                0                0     0               0</span></span>
+<span id="cb2-65"><a href="#cb2-65"></a><span class="co">#&gt; 6                0                0                0     0               0</span></span>
+<span id="cb2-66"><a href="#cb2-66"></a><span class="co">#&gt;   f.num.age(20,30] f.num.age(10,20] f.num.age(50,60] f.num.age(30,40]</span></span>
+<span id="cb2-67"><a href="#cb2-67"></a><span class="co">#&gt; 1                0                0                0                0</span></span>
+<span id="cb2-68"><a href="#cb2-68"></a><span class="co">#&gt; 2                0                0                0                0</span></span>
+<span id="cb2-69"><a href="#cb2-69"></a><span class="co">#&gt; 3                0                0                0                0</span></span>
+<span id="cb2-70"><a href="#cb2-70"></a><span class="co">#&gt; 4                0                0                0                0</span></span>
+<span id="cb2-71"><a href="#cb2-71"></a><span class="co">#&gt; 5                0                0                0                0</span></span>
+<span id="cb2-72"><a href="#cb2-72"></a><span class="co">#&gt; 6                0                0                0                0</span></span>
+<span id="cb2-73"><a href="#cb2-73"></a><span class="co">#&gt;   f.num.age(40,50] f.num.age(60,70] r.num r.num.age(0,10] r.num.age(20,30]</span></span>
+<span id="cb2-74"><a href="#cb2-74"></a><span class="co">#&gt; 1                0                0     0               0                0</span></span>
+<span id="cb2-75"><a href="#cb2-75"></a><span class="co">#&gt; 2                0                0     0               0                0</span></span>
+<span id="cb2-76"><a href="#cb2-76"></a><span class="co">#&gt; 3                0                0     0               0                0</span></span>
+<span id="cb2-77"><a href="#cb2-77"></a><span class="co">#&gt; 4                0                0     0               0                0</span></span>
+<span id="cb2-78"><a href="#cb2-78"></a><span class="co">#&gt; 5                0                0     1               1                0</span></span>
+<span id="cb2-79"><a href="#cb2-79"></a><span class="co">#&gt; 6                0                0     2               2                0</span></span>
+<span id="cb2-80"><a href="#cb2-80"></a><span class="co">#&gt;   r.num.age(10,20] r.num.age(50,60] r.num.age(30,40] r.num.age(40,50]</span></span>
+<span id="cb2-81"><a href="#cb2-81"></a><span class="co">#&gt; 1                0                0                0                0</span></span>
+<span id="cb2-82"><a href="#cb2-82"></a><span class="co">#&gt; 2                0                0                0                0</span></span>
+<span id="cb2-83"><a href="#cb2-83"></a><span class="co">#&gt; 3                0                0                0                0</span></span>
+<span id="cb2-84"><a href="#cb2-84"></a><span class="co">#&gt; 4                0                0                0                0</span></span>
+<span id="cb2-85"><a href="#cb2-85"></a><span class="co">#&gt; 5                0                0                0                0</span></span>
+<span id="cb2-86"><a href="#cb2-86"></a><span class="co">#&gt; 6                0                0                0                0</span></span>
+<span id="cb2-87"><a href="#cb2-87"></a><span class="co">#&gt;   r.num.age(60,70] e.num e.num.age(0,10] e.num.age(20,30] e.num.age(10,20]</span></span>
+<span id="cb2-88"><a href="#cb2-88"></a><span class="co">#&gt; 1                0     0               0                0                0</span></span>
+<span id="cb2-89"><a href="#cb2-89"></a><span class="co">#&gt; 2                0     5               1                2                2</span></span>
+<span id="cb2-90"><a href="#cb2-90"></a><span class="co">#&gt; 3                0    16               3                3                3</span></span>
+<span id="cb2-91"><a href="#cb2-91"></a><span class="co">#&gt; 4                0    34               2                7                7</span></span>
+<span id="cb2-92"><a href="#cb2-92"></a><span class="co">#&gt; 5                0    68               6               18               10</span></span>
+<span id="cb2-93"><a href="#cb2-93"></a><span class="co">#&gt; 6                0    76               5               26               10</span></span>
+<span id="cb2-94"><a href="#cb2-94"></a><span class="co">#&gt;   e.num.age(50,60] e.num.age(30,40] e.num.age(40,50] e.num.age(60,70] se.flow</span></span>
+<span id="cb2-95"><a href="#cb2-95"></a><span class="co">#&gt; 1                0                0                0                0       0</span></span>
+<span id="cb2-96"><a href="#cb2-96"></a><span class="co">#&gt; 2                0                0                0                0       5</span></span>
+<span id="cb2-97"><a href="#cb2-97"></a><span class="co">#&gt; 3                0                5                2                0      13</span></span>
+<span id="cb2-98"><a href="#cb2-98"></a><span class="co">#&gt; 4                4               10                4                0      29</span></span>
+<span id="cb2-99"><a href="#cb2-99"></a><span class="co">#&gt; 5                5               16               13                0      38</span></span>
+<span id="cb2-100"><a href="#cb2-100"></a><span class="co">#&gt; 6                6               18               10                1      13</span></span>
+<span id="cb2-101"><a href="#cb2-101"></a><span class="co">#&gt;   ei.flow iq.flow h.flow r.flow f.flow ds.flow di.flow dr.flow</span></span>
+<span id="cb2-102"><a href="#cb2-102"></a><span class="co">#&gt; 1       0       0      0      0      0      NA      NA      NA</span></span>
+<span id="cb2-103"><a href="#cb2-103"></a><span class="co">#&gt; 2       0       0      0      0      0       0       0       0</span></span>
+<span id="cb2-104"><a href="#cb2-104"></a><span class="co">#&gt; 3       2       0      0      0      0       0       0       0</span></span>
+<span id="cb2-105"><a href="#cb2-105"></a><span class="co">#&gt; 4      11       2      0      0      0       0       0       0</span></span>
+<span id="cb2-106"><a href="#cb2-106"></a><span class="co">#&gt; 5       4       0      0      1      0       0       0       0</span></span>
+<span id="cb2-107"><a href="#cb2-107"></a><span class="co">#&gt; 6       5       1      2      1      0       0       0       0</span></span></code></pre></div>
+<p><em>Note:</em> <code>net_example</code> is the output of the default <code>net_simulate()</code> run.</p>
+<p>We can furthermore write this object as a <strong>csv</strong> to port it into other languages.</p>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r"><code class="sourceCode r"><span id="cb3-1"><a href="#cb3-1"></a><span class="kw">write.csv</span>(results_df, <span class="st">&#39;network_simulation_results.csv&#39;</span>)</span></code></pre></div>
+
+
+
+<!-- code folding -->
+
+
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+  (function () {
+    var script = document.createElement("script");
+    script.type = "text/javascript";
+    script.src  = "https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML";
+    document.getElementsByTagName("head")[0].appendChild(script);
+  })();
+</script>
+
+</body>
+</html>

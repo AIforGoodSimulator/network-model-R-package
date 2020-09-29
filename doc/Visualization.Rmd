@@ -1,0 +1,52 @@
+---
+title: "Visualization"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Visualization}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, message=F, warning=F}
+library(CampNetworkSimulator)
+```
+
+A few plotting functions are provided though many more could be used, and we encourage making more custom plots from the results dataframe.
+
+The user may choose to plot the default curves representing the number of individual in each state (susceptible, infected, quarantined...) at each time step using `plot_states()`:
+```{r}
+plot_states(net_example)
+```
+
+_Usage:_
+```{r, eval = F}
+net_obj = net_simulate()
+plot_states(net_obj)
+```
+
+Additionally, we offer a couple of function to visualise the contact matrix at one or at each timestep of the simulation. The code below shows the contact matrix at time step 5 of the simulation. 
+
+```{r}
+network.heatmap(net_example, at = 5)
+```
+
+Additionally, we can extract a GIF of this interaction matrix in a range or from beginning to end.
+
+```{r}
+network.heatmap.GIF(net_example) # from first time-step to end
+```
+
+```{r}
+network.heatmap.GIF(net_example, interval = 5:10) # from timestep 5 to timestep 10
+```
+
+_Note:_ In the contact matrix, a black square (a value of 1) at represents an interaction between the 'row' individual and the 'column' individual.
+
+
