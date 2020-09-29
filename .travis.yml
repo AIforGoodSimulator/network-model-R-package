@@ -1,13 +1,14 @@
 language: r
+dist: bionic
 sudo: false
 cache: packages
-latex: false
 
 r:
   - release
 
 r_packages:
   - nlme
+  - devtools
 
 # to avoid building vignettes which takes too long
 r_check_args: "--no-build-vignettes --ignore-vignettes"
