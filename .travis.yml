@@ -9,6 +9,9 @@ r:
 r_packages:
   - nlme
 
+# to avoid building vignettes which takes too long
+r_check_args: "--no-build-vignettes --ignore-vignettes"
+
 addons:
   apt:
     packages:

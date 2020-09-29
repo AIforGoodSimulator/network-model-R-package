@@ -7,7 +7,7 @@
 plot_states(net_build_object)
 }
 \arguments{
-\item{net_build_object}{objected returned by \code{net_simulate}}
+\item{net_build_object}{object returned by \code{net_simulate}}
 }
 \description{
 Plot epidemic curves for each state

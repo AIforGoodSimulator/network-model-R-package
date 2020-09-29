@@ -1,6 +1,6 @@
 Package: CampNetworkSimulator
 Title: CNS(CampNetworkSimulator)
-Version: 0.0.1
+Version: 0.0.2
 Authors@R: 
     person(given = "Luis",
            family = "Chaves",
@@ -30,4 +30,9 @@ Imports:
     foreach,
     doParallel,
     magrittr,
-    tergmLite
+    tergmLite,
+    rlang
+Suggests: 
+    knitr,
+    rmarkdown
+VignetteBuilder: knitr
