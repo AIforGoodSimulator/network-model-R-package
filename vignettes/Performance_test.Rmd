@@ -1,6 +1,10 @@
 ---
 title: "Performance test"
-output: rmarkdown::html_vignette
+output: rmarkdown::html_document
+vignette: >
+  %\VignetteIndexEntry{Performance_test}
+  %\VignetteEngine{knitr::rmarkdown_notangle}
+  %\VignetteEncoding{UTF-8}
 ---
 
 ```{r, include = FALSE}
@@ -8,6 +12,9 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
+is_check <- ("CheckExEnv" %in% search()) || any(c("_R_CHECK_TIMINGS_",
+             "_R_CHECK_LICENSE_") %in% names(Sys.getenv()))
+knitr::opts_chunk$set(eval = !is_check)
 ```
 
 ```{r setup, warning=F, message=F}
@@ -17,7 +24,7 @@ library(ggplot2) # for plotting
 
 In this vignette we are simply testing the time-to-completion of our code as a function of network size. We will be using 3 cores for the network diagnostics and the network simulation steps and all other default parameters will be left unchanged. We will also be running 3 simulations for each network size as this is closer to how this model would actually be used (for statistical confidence).
 
-```{r echo= T, results = 'hide'}
+```{r echo= T, results = 'hide', warning=F, message=F}
 network_sizes = c(100, 500, 1000, 3000, 5000, 10000, 20000)
 time_to_completion = sapply(
   network_sizes,

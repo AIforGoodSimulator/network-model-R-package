@@ -1,0 +1,43 @@
+---
+title: "Extracting_results_as_dataframe"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Extracting_results_as_dataframe}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup, warning=F, message=F}
+library(CampNetworkSimulator)
+```
+
+The output is the `net_simulate()` function is made of four elements. First it contains a log string which contains all warnings or messages that were created through out the different steps of the simulation. Next it contains __network_estimation__, this object results from the output of the Epimodel's `netest()` function. From EpiModel's documentation (see `?EpiModel::netest`)
+> Network model estimation is the first step in simulating a stochastic network epidemic model in EpiModel. The output from netest is a necessary input for running the epidemic simulations in netsim. 
+
+This object should not be necessary for the end-user but it is there in case the user needs it.
+
+Next is the __network_diagnostics__ object, which registers the output from the EpiModel `netdx()` function. This function allows to check the goodness-of-fit (GOF) of the network estimation. In practice this allows the user to know whether the specific network specifications have been matched (e.g. number of connection between males and females in a given network)
+
+Finally, we have the __network_simulation__ object, which holds information regarding the epidemic parameters (infection rate, recovery rate...), the simulation configuration (number of simulations, number of timesteps...) and the model output (number of infected, recovered, susceptible people at each timestep in each simulation...). This is the main object end-user will be exposed to and is the one that contains the simulation results. These results can easily be accessed as a dataframe by running:
+
+```{r}
+results_df = as.data.frame(net_example$network_simulation)
+head(results_df)
+```
+_Note:_ `net_example` is the output of the default `net_simulate()` run.
+
+We can furthermore write this object as a __csv__ to port it into other languages.
+
+```{r eval = F}
+write.csv(results_df, 'network_simulation_results.csv')
+```
+
+
+

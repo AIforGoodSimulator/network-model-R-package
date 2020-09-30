@@ -1,5 +1,5 @@
 ---
-title: "Extracting results as dataframe"
+title: "Extracting_results_as_dataframe"
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Extracting_results_as_dataframe}
